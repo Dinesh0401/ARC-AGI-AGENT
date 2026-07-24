@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 from agents.random_agent import RandomAgent
+from agents.cognitive_agent import CognitiveAgent
 from environment.wrapper import ARCEnvironment
 from evaluation.runner import EvaluationRunner
 from utils.logger import setup_logger
@@ -16,6 +17,13 @@ from analysis.action_statistics import ActionStatistics
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="ARC-AGI-3 Research Agent Baseline, Visualizer, Benchmark & Trajectory Analysis"
+    )
+    parser.add_argument(
+        "--agent",
+        type=str,
+        default="cognitive",
+        choices=["cognitive", "random"],
+        help="Agent architecture type to evaluate (cognitive or random)",
     )
     parser.add_argument(
         "--env",
@@ -108,7 +116,12 @@ def main() -> None:
         return
 
     env = ARCEnvironment(game_id=args.env)
-    agent = RandomAgent(name="RandomAgent-Baseline", seed=args.seed)
+
+    if args.agent == "random":
+        agent = RandomAgent(name="RandomAgent-Baseline", seed=args.seed)
+    else:
+        agent = CognitiveAgent(name="CognitiveAgent-FullPipeline", seed=args.seed)
+
     runner = EvaluationRunner(agent=agent, env=env)
 
     # Multi-episode Benchmark mode
@@ -126,7 +139,7 @@ def main() -> None:
         return
 
     # Single episode execution loop with optional visualizer & replay logging
-    logger.info("Initializing single episode evaluation...")
+    logger.info(f"Initializing single episode evaluation for agent '{agent.name}'...")
     replay_logger = ReplayLogger(game_id=args.env) if args.save_replay else None
 
     result = runner.run_episode(

@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from perception.scene_graph import SceneGraph
 from .transition_model import TransitionModel
 from .simulator import Simulator
@@ -13,10 +13,18 @@ class PredictionEngine:
         self.simulator = Simulator(self.transition_model)
         self.uncertainty_quantifier = UncertaintyQuantifier()
         self.state_predictor = StatePredictor(self.simulator, self.uncertainty_quantifier, self.transition_model)
+        self.cache: Dict[str, Prediction] = {}
         
     def evaluate_action(self, current_state: SceneGraph, action: str) -> Prediction:
         """Evaluate a single action and return the predicted state with confidence metrics."""
-        return self.state_predictor.predict(current_state, action)
+        # Simple cache key: (State Hash, Action)
+        state_hash = str(current_state.objects.keys()) + "_" + action
+        if state_hash in self.cache:
+            return self.cache[state_hash]
+            
+        prediction = self.state_predictor.predict(current_state, action)
+        self.cache[state_hash] = prediction
+        return prediction
         
     def rollout_policy(self, current_state: SceneGraph, actions: List[str]) -> Tuple[SceneGraph, float]:
         """Rollout a sequence of actions and return the final predicted state and cumulative confidence."""
@@ -26,7 +34,6 @@ class PredictionEngine:
         for action in actions:
             prediction = self.evaluate_action(state, action)
             state = prediction.predicted_state
-            # Simple joint probability assumption for MVP
             cumulative_confidence *= prediction.confidence
             
         return state, cumulative_confidence

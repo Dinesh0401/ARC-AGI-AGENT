@@ -40,6 +40,19 @@ An open, research-grade cognitive AI framework designed to solve interactive, un
                                   └───────────────────────────┘
 ```
 
+# ARC-AGI-3 Research Agent
+
+🚀 Current Version: v1.0.0
+
+Status:
+✅ Stage 1 Complete
+
+Roadmap
+
+- ✅ Stage 1 – Cognitive Architecture
+- 🔄 Stage 2 – Official ARC Toolkit Integration
+- ⏳ Stage 3 – Swarm Intelligence
+- ⏳ Stage 4 – Competition Optimization
 ---
 
 ## 📅 Architectural Milestones (Completed 8/8)

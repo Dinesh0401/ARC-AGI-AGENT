@@ -5,11 +5,14 @@ import json
 from pathlib import Path
 from agents.random_agent import RandomAgent
 from agents.cognitive_agent import CognitiveAgent
+from submission.competition_agent import CompetitionCognitiveAgent
+from submission.kaggle_runner import KaggleSubmissionRunner
 from environment.wrapper import ARCEnvironment
 from evaluation.runner import EvaluationRunner
 from benchmark.benchmark_runner import BenchmarkRunner
 from benchmark.report_generator import ReportGenerator
 from benchmark.visualization import BenchmarkVisualizer
+from benchmark.config import DEFAULT_GAMES
 from utils.logger import setup_logger
 from utils.visualizer import render_ansi_grid
 from utils.replay import ReplayLogger, ReplayViewer
@@ -52,6 +55,11 @@ def main() -> None:
         help="Run multi-episode benchmark evaluation",
     )
     parser.add_argument(
+        "--competition",
+        action="store_true",
+        help="Run competition mode with caching, profiling, and Kaggle submission generation",
+    )
+    parser.add_argument(
         "--num-episodes",
         type=int,
         default=5,
@@ -83,6 +91,25 @@ def main() -> None:
 
     args = parser.parse_args()
     logger = setup_logger("main")
+
+    # Competition Submission Mode
+    if args.competition:
+        logger.info("Initializing Competition Optimization Mode...")
+        comp_runner = KaggleSubmissionRunner()
+        sub_path = comp_runner.generate_submission(game_ids=DEFAULT_GAMES, max_steps=args.max_steps)
+
+        # Profile runtime
+        agent = CompetitionCognitiveAgent(name="CompAgent-Profile")
+        env = ARCEnvironment(game_id=args.env)
+        obs = env.reset()
+        for _ in range(3):
+            action = agent.act(obs)
+            obs, _, _, _ = env.step(action)
+
+        agent.profiler.save_report()
+        logger.info(f"Kaggle Submission payload created at: {sub_path}")
+        logger.info("Runtime profiling report saved to results/runtime_profile.csv")
+        return
 
     # Analyze trajectory replay mode
     if args.analyze:

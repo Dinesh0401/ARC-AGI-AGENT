@@ -1,4 +1,4 @@
-"""Random Agent implementation for ARC-AGI-3 baseline execution."""
+"""Random Agent baseline implementation for ARC-AGI-3 abstract action spaces."""
 
 import random
 from typing import Any, Dict, List, Optional
@@ -6,24 +6,51 @@ from .base import BaseAgent
 
 
 class RandomAgent(BaseAgent):
-    """Agent that selects actions uniformly at random from available actions."""
+    """Agent that selects actions randomly from available abstract action tokens.
 
-    def __init__(self, name: str = "RandomAgent", seed: Optional[int] = None) -> None:
+    Supports coordinate parameter sampling for complex actions (e.g. ACTION6).
+    """
+
+    def __init__(
+        self,
+        name: str = "RandomAgent",
+        seed: Optional[int] = None,
+        action_weights: Optional[Dict[str, float]] = None,
+    ) -> None:
         super().__init__(name=name)
+        self.seed = seed
+        self.action_weights = action_weights
         if seed is not None:
             random.seed(seed)
 
     def act(self, observation: Dict[str, Any]) -> Any:
-        """Select a random action from the observation's available actions list.
+        """Select a random action token or parameterized tuple based on observation payload.
 
         Args:
-            observation: Environment observation containing 'available_actions' key.
+            observation: Environment observation payload containing 'available_actions' and 'grid_shape'.
 
         Returns:
-            Chosen action.
+            Chosen action token string or tuple.
         """
-        available_actions: List[Any] = observation.get("available_actions", [])
+        available_actions: List[str] = observation.get(
+            "available_actions", ["ACTION1", "ACTION2", "ACTION3", "ACTION4"]
+        )
+        grid_shape = observation.get("grid_shape", (10, 10))
+
         if not available_actions:
-            # Fallback action if available_actions is empty or unspecified
-            return 0
-        return random.choice(available_actions)
+            return "ACTION1"
+
+        if not self.action_weights:
+            chosen = random.choice(available_actions)
+        else:
+            weights = [self.action_weights.get(act, 1.0) for act in available_actions]
+            chosen = random.choices(available_actions, weights=weights, k=1)[0]
+
+        # Handle complex coordinate action (ACTION6)
+        if chosen == "ACTION6":
+            h, w = grid_shape[0], grid_shape[1]
+            rand_x = random.randint(0, max(0, w - 1))
+            rand_y = random.randint(0, max(0, h - 1))
+            return ("ACTION6", rand_x, rand_y)
+
+        return chosen

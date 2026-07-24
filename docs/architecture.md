@@ -1,50 +1,69 @@
-# System Architecture Documentation
+# Cognitive Agent Architecture
 
-## ARC-AGI-3 Cognitive AI Agent Architecture
+This document outlines the modular cognitive AI framework for the ARC-AGI-3 Agent, designed to transition from raw environmental data to high-level symbolic reasoning and strategic planning.
 
-The system is designed as a modular, decoupled research architecture where perception, memory, hypothesis generation, search planning, and evaluation are separated into distinct packages.
+## High-Level Data Flow
 
+```text
+ARC Environment
+        │ (Grid observation)
+        ▼
+   Perception
+        │ (Objects, Geometry)
+        ▼
+   Scene Graph
+        │ (Nodes + Relations)
+        ▼
+  Knowledge Base
+        │ (Stateful Facts)
+        ▼
+ Cognitive Memory  ◄─── (Evidence/Episodes)
+        │
+        ▼
+  Belief Memory
+        │ (Confidence-scored Hypotheses)
+        ▼
+Hypothesis Manager
+        │
+        ▼
+ Inference Engine
+        │ (Deductive/Inductive logic)
+        ▼
+  Goal Generator
+        │ (Concrete Objectives)
+        ▼
+     Planner
+        │ (Search: BFS, A*, MCTS)
+        ▼
+  Action Selector
+        │ (Executable Action Sequence)
+        ▼
+  ARC Environment
 ```
-+-------------------------------------------------------------------+
-|                        Evaluation Pipeline                        |
-|                        (evaluation/runner.py)                     |
-+---------------------------------+---------------------------------+
-                                  |
-                                  v
-+---------------------------------+---------------------------------+
-|                       ARCEnvironment Wrapper                      |
-|                      (environment/wrapper.py)                     |
-+---------------------------------+---------------------------------+
-                                  | Observations & Feedback
-                                  v
-+---------------------------------+---------------------------------+
-|                         BaseAgent Interface                       |
-|                          (agents/base.py)                         |
-+---------------+-----------------+----------------+----------------+
-                |                 |                |
-                v                 v                v
-        +---------------+ +---------------+ +---------------+
-        | Object Parser | | Memory System | | Planner Engine|
-        | (Phase 3)     | | (Phase 4)     | | (Phase 7)     |
-        +---------------+ +---------------+ +---------------+
-```
 
-### Module Responsibilities
+## Module Responsibilities
 
-1. **Perception & State Representation (`agents/`, `environment/`)**:
-   - Parses raw environment observations (JSON state, grids).
-   - Extracts connected objects, color properties, spatial relations, and grid transforms.
+### 1. Perception (`perception/`)
+Transforms raw pixel grids into an object-centric **Scene Graph**. It isolates objects using Connected Component Analysis, extracts geometric features (centroids, bounding boxes, shapes), and evaluates pairwise semantic relations (`Touches`, `Contains`, `Left Of`).
 
-2. **Memory System (`memory/`)**:
-   - Maintains **Episodic Memory** (log of past step trajectories).
-   - Maintains **Semantic Memory** (learned object behaviors and action outcome maps).
+### 2. Knowledge Representation (`memory/knowledge_base.py`)
+Acts as the intermediary between the visual Scene Graph and the Reasoning layer. It converts the graph into a flat, queryable dictionary of facts (e.g., `Object_001.Contains`).
 
-3. **Hypothesis & Action Inference (`agents/`, `planner/`)**:
-   - Infers action semantics dynamically based on observed state transitions.
-   - Evaluates hypothesis confidence scores.
+### 3. Cognitive Memory (`memory/`)
+A multi-store memory architecture:
+- **Episodic**: Stores chronological transitions `(State, Action, Reward, Next State)`.
+- **Semantic**: Stores global, timeless `Rule`s.
+- **Working**: A Priority Queue for short-term thoughts and active contexts.
+- **Procedural**: Stores contexts and strategies `Situation -> Strategy -> Outcome`.
+- **Belief**: Tracks assumptions and hypotheses with dynamic confidence scores based on evidence.
 
-4. **Planning Engine (`planner/`)**:
-   - Executes search algorithms (BFS, A*, Beam Search) over state graphs to reach targeted goal configurations.
+### 4. Reasoning (`reasoning/`)
+The "thinking" layer. Rather than searching blindly, it cross-references facts and rules (`InferenceEngine`), forms testable hypotheses (`HypothesisManager`), validates logical consistency (`Verifier`), and evaluates evidence (`ConfidenceTracker`). It ultimately emits structured `Goal`s to the planner.
 
-5. **Benchmarking & Evaluation (`evaluation/`)**:
-   - Tracks metrics across environment runs (win rate, action efficiency, runtime).
+### 5. Planning (`planning/`)
+Strictly focused on state-space search. It receives a `Goal` and evaluates available paths using BFS, A*, or MCTS to find the optimal sequence of actions to satisfy the goal's target conditions.
+
+## Future Roadmap
+
+- **Phase 7: World Model**: Implementing an internal simulator capable of predicting `Next State` given `(Current State, Action)`, allowing the Planner to effectively roll out hypothetical futures.
+- **Phase 8: Learning Loop**: Closing the cycle by comparing `Expected Outcomes` vs `Actual Outcomes` to calculate Prediction Errors, subsequently adjusting Semantic Rules and Beliefs.

@@ -60,6 +60,8 @@ class EpisodeMetrics:
     total_reward: float
     human_efficiency_score: float
     execution_time_sec: float
+    failure_cause: str = "None"
+    most_useful_module: str = "Cognitive Perception"
     env_metrics: Optional[EnvironmentMetrics] = None
     plan_metrics: Optional[PlanningMetrics] = None
     wm_metrics: Optional[WorldModelMetrics] = None
@@ -78,6 +80,8 @@ class EpisodeMetrics:
             "total_reward": self.total_reward,
             "human_efficiency_score": self.human_efficiency_score,
             "execution_time_sec": self.execution_time_sec,
+            "failure_cause": self.failure_cause,
+            "most_useful_module": self.most_useful_module,
             "planner_used": self.plan_metrics.planner_used if self.plan_metrics else "N/A",
             "planning_time_ms": self.plan_metrics.planning_time_ms if self.plan_metrics else 0.0,
             "prediction_error": self.wm_metrics.prediction_error if self.wm_metrics else 0.0,

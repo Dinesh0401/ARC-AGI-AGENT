@@ -22,12 +22,25 @@ from learning import LearningLoop, Experience
 
 
 class CognitiveAgent(BaseAgent):
-    """Full Cognitive Architecture Agent for ARC-AGI-3 environments."""
+    """Full Cognitive Architecture Agent for ARC-AGI-3 environments with Ablation Toggles."""
 
-    def __init__(self, name: str = "CognitiveAgent", seed: int = 42) -> None:
+    def __init__(
+        self,
+        name: str = "CognitiveAgent",
+        seed: int = 42,
+        enable_memory: bool = True,
+        enable_world_model: bool = True,
+        enable_planning: bool = True,
+        enable_learning: bool = True,
+    ) -> None:
         super().__init__(name=name)
         self.seed = seed
         np.random.seed(seed)
+
+        self.enable_memory = enable_memory
+        self.enable_world_model = enable_world_model
+        self.enable_planning = enable_planning
+        self.enable_learning = enable_learning
 
         # 1. Perception
         self.parser = ObjectParser()
@@ -53,10 +66,11 @@ class CognitiveAgent(BaseAgent):
         self.prediction_engine = PredictionEngine()
 
         # 5. Planning
-        # Transition function for planning queries the prediction engine
         def world_model_transition(state: SceneGraph, action_str: str) -> SceneGraph:
-            pred = self.prediction_engine.evaluate_action(state, action_str)
-            return pred.predicted_state
+            if self.enable_world_model:
+                pred = self.prediction_engine.evaluate_action(state, action_str)
+                return pred.predicted_state
+            return state
 
         self.planner = PlanningOrchestrator(world_model_transition)
 
@@ -79,9 +93,7 @@ class CognitiveAgent(BaseAgent):
         self.active_plan = None
 
     def act(self, observation: Dict[str, Any]) -> Any:
-        """Execute full Cognitive Pipeline:
-        Perceive -> KB -> Infer -> Reason Goal -> Plan -> Predict -> Act -> Learn
-        """
+        """Execute Cognitive Pipeline respecting ablation flags."""
         grid_data = observation.get("frame", observation.get("grid", []))
         if isinstance(grid_data, list):
             grid = np.array(grid_data)
@@ -92,13 +104,17 @@ class CognitiveAgent(BaseAgent):
             "available_actions", ["ACTION1", "ACTION2", "ACTION3", "ACTION4"]
         )
 
-        # --- 1. Perception ---
+        # 1. Perception
         objects = self.parser.parse_grid(grid)
         relations = self.relation_detector.detect_relations(objects)
         current_scene = SceneGraph(objects, relations)
 
-        # --- 2. Learning Loop (Process previous step outcome if available) ---
-        if self.last_scene_graph is not None and self.last_action is not None:
+        # 2. Learning Loop (If enabled)
+        if (
+            self.enable_learning
+            and self.last_scene_graph is not None
+            and self.last_action is not None
+        ):
             exp = Experience(
                 pre_state=self.last_scene_graph,
                 action=self.last_action,
@@ -108,47 +124,43 @@ class CognitiveAgent(BaseAgent):
             )
             self.learning_loop.process_experience(exp)
 
-        # --- 3. Knowledge Base Update ---
-        self.memory.knowledge_base.facts.clear()
-        for obj_id, obj in objects.items():
-            self.memory.knowledge_base.update_fact(
-                obj_id,
-                {
-                    "color": obj.color,
-                    "area": obj.area,
-                    "shape": obj.shape,
-                    "centroid": obj.centroid,
-                },
-            )
+        # 3. Knowledge Base Update (If memory enabled)
+        if self.enable_memory:
+            self.memory.knowledge_base.facts.clear()
+            for obj_id, obj in objects.items():
+                self.memory.knowledge_base.update_fact(
+                    obj_id,
+                    {
+                        "color": obj.color,
+                        "area": obj.area,
+                        "shape": obj.shape,
+                        "centroid": obj.centroid,
+                    },
+                )
+            self.inference_engine.infer()
+            if not self.memory.working.get_thoughts():
+                self.memory.working.add_thought("Need to find target pattern", priority=5)
 
-        # --- 4. Reasoning & Inference ---
-        self.inference_engine.infer()
-
-        # Seed working memory if empty
-        if not self.memory.working.get_thoughts():
-            self.memory.working.add_thought("Need to find target pattern", priority=5)
-
-        goals = self.goal_generator.generate_goals()
-
-        # --- 5. Planning ---
+        # 4. Goal Generation & Planning (If planning enabled)
         selected_action = None
-        if goals:
-            top_goal = goals[0]
-            # Strip positional params if action tokens are basic strings
-            valid_actions = [
-                a for a in available_actions if isinstance(a, str) and a != "RESET"
-            ]
-            if not valid_actions:
-                valid_actions = ["ACTION1", "ACTION2", "ACTION3", "ACTION4"]
+        if self.enable_planning:
+            goals = self.goal_generator.generate_goals() if self.enable_memory else []
+            if goals:
+                top_goal = goals[0]
+                valid_actions = [
+                    a for a in available_actions if isinstance(a, str) and a != "RESET"
+                ]
+                if not valid_actions:
+                    valid_actions = ["ACTION1", "ACTION2", "ACTION3", "ACTION4"]
 
-            self.active_plan = self.planner.generate_plan(
-                current_scene, top_goal, valid_actions
-            )
+                self.active_plan = self.planner.generate_plan(
+                    current_scene, top_goal, valid_actions
+                )
 
-            if self.active_plan and self.active_plan.actions:
-                selected_action = self.active_plan.actions[0]
+                if self.active_plan and self.active_plan.actions:
+                    selected_action = self.active_plan.actions[0]
 
-        # Fallback to intelligent action selection if no plan or empty plan
+        # Fallback to intelligent action selection
         if selected_action is None:
             valid_actions = [
                 a for a in available_actions if isinstance(a, str) and a != "RESET"
@@ -158,10 +170,12 @@ class CognitiveAgent(BaseAgent):
             else:
                 selected_action = "ACTION1"
 
-        # --- 6. Prediction ---
-        self.last_prediction = self.prediction_engine.evaluate_action(
-            current_scene, selected_action
-        )
+        # 5. World Model Prediction (If enabled)
+        if self.enable_world_model:
+            self.last_prediction = self.prediction_engine.evaluate_action(
+                current_scene, selected_action
+            )
+
         self.last_scene_graph = current_scene
         self.last_action = selected_action
 

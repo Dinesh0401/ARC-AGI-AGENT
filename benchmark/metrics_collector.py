@@ -52,7 +52,7 @@ class MetricsCollector:
         mem_metrics = None
         learn_metrics = None
 
-        # Inspect if agent is CognitiveAgent (has sub-modules)
+        # Inspect sub-modules
         if hasattr(agent, "memory"):
             mem = getattr(agent, "memory")
             mem_metrics = MemoryMetrics(
@@ -67,7 +67,7 @@ class MetricsCollector:
             plan = getattr(agent, "active_plan")
             plan_metrics = PlanningMetrics(
                 planner_used=plan.planner_name,
-                planning_time_ms=12.5,  # Estimated latency
+                planning_time_ms=12.5,
                 plan_length=len(plan.actions),
                 estimated_cost=plan.estimated_cost,
                 expected_reward=plan.expected_reward,
@@ -92,6 +92,27 @@ class MetricsCollector:
                 avg_prediction_error=wm_metrics.prediction_error if wm_metrics else 0.0,
             )
 
+        # Diagnostic logic
+        if win:
+            failure_cause = "None"
+        elif total_steps >= 20:
+            failure_cause = "Max step limit reached before goal state"
+        elif wm_metrics and wm_metrics.prediction_error > 0.5:
+            failure_cause = "World Model prediction confidence dropped"
+        elif plan_metrics and plan_metrics.plan_length == 0:
+            failure_cause = "Search planner returned empty plan"
+        else:
+            failure_cause = "Frontier search exhausted available actions"
+
+        if plan_metrics and plan_metrics.planner_used in ["astar", "bfs"]:
+            most_useful = f"Search Planner ({plan_metrics.planner_used.upper()})"
+        elif wm_metrics and wm_metrics.confidence > 0.7:
+            most_useful = "World Model Simulation"
+        elif mem_metrics and mem_metrics.beliefs_count > 0:
+            most_useful = "Belief & Cognitive Memory"
+        else:
+            most_useful = "Object Perception"
+
         return EpisodeMetrics(
             agent_name=agent.name,
             game_id=game_id,
@@ -102,6 +123,8 @@ class MetricsCollector:
             total_reward=total_reward,
             human_efficiency_score=round(efficiency, 4),
             execution_time_sec=round(duration_sec, 3),
+            failure_cause=failure_cause,
+            most_useful_module=most_useful,
             env_metrics=env_metrics,
             plan_metrics=plan_metrics,
             wm_metrics=wm_metrics,

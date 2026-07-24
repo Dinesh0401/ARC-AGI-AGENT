@@ -7,6 +7,9 @@ from agents.random_agent import RandomAgent
 from agents.cognitive_agent import CognitiveAgent
 from environment.wrapper import ARCEnvironment
 from evaluation.runner import EvaluationRunner
+from benchmark.benchmark_runner import BenchmarkRunner
+from benchmark.report_generator import ReportGenerator
+from benchmark.visualization import BenchmarkVisualizer
 from utils.logger import setup_logger
 from utils.visualizer import render_ansi_grid
 from utils.replay import ReplayLogger, ReplayViewer
@@ -122,24 +125,32 @@ def main() -> None:
     else:
         agent = CognitiveAgent(name="CognitiveAgent-FullPipeline", seed=args.seed)
 
-    runner = EvaluationRunner(agent=agent, env=env)
-
     # Multi-episode Benchmark mode
     if args.benchmark:
-        metrics = runner.run_benchmark(num_episodes=args.num_episodes, max_steps=args.max_steps)
+        benchmark_runner = BenchmarkRunner(agent=agent, env=env)
+        metrics = benchmark_runner.run_benchmark(
+            num_episodes=args.num_episodes, max_steps=args.max_steps
+        )
+
+        # Generate report and charts
+        report_gen = ReportGenerator()
+        report_gen.generate_report({agent.name: metrics})
+        visualizer = BenchmarkVisualizer()
+        visualizer.generate_plots({agent.name: metrics})
+
         print("\n================ BENCHMARK SUMMARY ================")
         print(f"Agent: {metrics['agent_name']}")
-        print(f"Game ID: {metrics['game_id']}")
-        print(f"Total Episodes: {metrics['num_episodes']}")
+        print(f"Total Episodes: {metrics['total_episodes']}")
         print(f"Win Rate: {metrics['win_rate_percent']}%")
-        print(f"Avg Steps/Episode: {metrics['avg_steps_per_episode']}")
-        print(f"Avg Reward/Episode: {metrics['avg_reward_per_episode']}")
-        print(f"Avg Efficiency Score: {metrics['avg_efficiency_score']}")
+        print(f"Avg Steps/Episode: {metrics['avg_steps']}")
+        print(f"Avg Efficiency Score: {metrics['avg_efficiency']}")
+        print("Results saved to results/results.csv and results/results.json")
         print("===================================================\n")
         return
 
     # Single episode execution loop with optional visualizer & replay logging
     logger.info(f"Initializing single episode evaluation for agent '{agent.name}'...")
+    runner = EvaluationRunner(agent=agent, env=env)
     replay_logger = ReplayLogger(game_id=args.env) if args.save_replay else None
 
     result = runner.run_episode(

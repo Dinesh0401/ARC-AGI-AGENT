@@ -1,54 +1,75 @@
 from dataclasses import dataclass, field
 from typing import Dict, Any, List, Optional
 from memory.working import WorkingMemory
-from memory.belief_memory import BeliefMemory
+from reasoning.hypothesis_engine import HypothesisEngine, HypothesisStatus
 
 @dataclass
 class Goal:
-    """A concrete objective emitted for the Planner."""
+    """An objective for the planner. In Phase D, this is primarily to test a hypothesis."""
     description: str
     target_conditions: Dict[str, Any]
     priority: int
     confidence: float
     source: str
     deadline: Optional[int] = None
+    hypothesis_id: Optional[str] = None
     
 class GoalGenerator:
-    """Converts beliefs and high-priority thoughts into actionable Goals."""
+    """Infers testable hypotheses and generates goals to verify them."""
     
-    def __init__(self, working_memory: WorkingMemory, belief_memory: BeliefMemory):
+    def __init__(self, working_memory: WorkingMemory, hypothesis_engine: HypothesisEngine):
         self.working = working_memory
-        self.belief_memory = belief_memory
+        self.hypothesis_engine = hypothesis_engine
         
-    def generate_goals(self) -> List[Goal]:
-        """Produce goals from current thoughts and high-confidence beliefs."""
+    def generate_goals(self, current_scene: 'SceneGraph', object_tracker: 'ObjectTracker') -> List[Goal]:
+        """Produce goals to verify the most promising active hypotheses."""
         goals = []
         
-        # 1. Check Working Memory thoughts
+        # 1. Generate new hypotheses based on object tracker state
+        if current_scene and object_tracker:
+            for obj_id, tracked_obj in object_tracker.tracked_objects.items():
+                if tracked_obj.state_changes == 0 and len(tracked_obj.interaction_history) == 0:
+                    # Untested object
+                    for action in ["ACTION1", "ACTION2", "ACTION3", "ACTION4"]:
+                        desc = f"IF {action} THEN {obj_id} moves"
+                        self.hypothesis_engine.add_hypothesis(
+                            description=desc,
+                            target_object_id=obj_id,
+                            action=action,
+                            expected_effect="moves",
+                            initial_confidence=0.5
+                        )
+                
+                if tracked_obj.is_movable:
+                    for action in ["ACTION1", "ACTION2", "ACTION3", "ACTION4"]:
+                        desc = f"IF {action} THEN {obj_id} moves"
+                        self.hypothesis_engine.add_hypothesis(
+                            description=desc,
+                            target_object_id=obj_id,
+                            action=action,
+                            expected_effect="moves",
+                            initial_confidence=0.7
+                        )
+
+        # 2. Emit the primary environment-level goal
+        goals.append(Goal(
+            description="Complete the level by matching the implicit ARC rules.",
+            target_conditions={"type": "Solve"},
+            priority=100,
+            confidence=1.0,
+            source="GoalGenerator"
+        ))
+        
+        # 3. Check Working Memory thoughts for overriding tasks
         thoughts = self.working.get_thoughts()
         for thought in thoughts:
-            if "Need to find" in thought.text:
+            if "Need to" in thought.text:
                 goals.append(Goal(
                     description=thought.text,
-                    target_conditions={"type": "Search", "target": thought.text.split()[-1]},
+                    target_conditions={"type": "Task", "target": thought.text},
                     priority=thought.priority,
                     confidence=1.0,
                     source="WorkingMemory"
-                ))
-                
-        # 2. Check High-Confidence Beliefs
-        for belief in self.belief_memory.get_high_confidence_beliefs(threshold=0.7):
-            # If belief implies a promising action, generate a goal to execute it
-            if "Applying" in belief.hypothesis and "will succeed" in belief.hypothesis:
-                action = belief.hypothesis.split()[1]
-                target_obj = belief.hypothesis.split()[3]
-                
-                goals.append(Goal(
-                    description=f"Execute {action} on {target_obj}",
-                    target_conditions={"action": action, "target_obj": target_obj},
-                    priority=int(belief.confidence * 10),
-                    confidence=belief.confidence,
-                    source=f"BeliefMemory:{belief.id}"
                 ))
                 
         # Sort goals by priority

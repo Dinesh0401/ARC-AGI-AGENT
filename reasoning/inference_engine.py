@@ -1,15 +1,15 @@
 from typing import List, Dict, Any
 from memory.semantic import SemanticMemory
 from memory.knowledge_base import KnowledgeBase
-from reasoning.hypothesis_manager import HypothesisManager
+from reasoning.hypothesis_engine import HypothesisEngine
 
 class InferenceEngine:
     """Applies deductive/inductive logic across Rules and Facts."""
     
-    def __init__(self, semantic: SemanticMemory, knowledge_base: KnowledgeBase, hypothesis_manager: HypothesisManager):
+    def __init__(self, semantic: SemanticMemory, knowledge_base: KnowledgeBase, hypothesis_engine: HypothesisEngine):
         self.semantic = semantic
         self.kb = knowledge_base
-        self.hypothesis_manager = hypothesis_manager
+        self.hypothesis_engine = hypothesis_engine
         
     def infer(self) -> List[str]:
         """Apply rules to current knowledge base facts to generate hypotheses or conclusions.
@@ -38,8 +38,8 @@ class InferenceEngine:
                 if match:
                     # The condition holds for obj_id. Create a hypothesis from the outcome.
                     action_or_fact = rule.outcome.get("action_or_fact", "Unknown Action")
-                    hypothesis = f"Applying {action_or_fact} on {obj_id} will succeed."
-                    b_id = self.hypothesis_manager.generate_hypothesis(hypothesis, initial_confidence=0.6)
+                    hypothesis_desc = f"Applying {action_or_fact} on {obj_id} will succeed."
+                    b_id = self.hypothesis_engine.add_hypothesis(description=hypothesis_desc, initial_confidence=0.6)
                     new_belief_ids.append(b_id)
                     
         return new_belief_ids

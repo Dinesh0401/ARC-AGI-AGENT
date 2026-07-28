@@ -18,7 +18,7 @@ class PredictionErrorCalculator:
         
         for obj_id, p_obj in predicted_state.objects.items():
             a_obj = actual_state.objects.get(obj_id)
-            if not a_obj or a_obj.color != p_obj.color:
+            if not a_obj or a_obj.color != p_obj.color or a_obj.centroid != p_obj.centroid:
                 mismatches += 1
                 
         # Also check if objects exist in actual but not predicted

@@ -6,8 +6,8 @@ Comparative empirical evaluation between agent baseline implementations.
 
 | Agent Name | Total Episodes | Win Rate (%) | Avg Steps | Avg Efficiency |
 | :--- | :---: | :---: | :---: | :---: |
-| **RandomAgent-Baseline** | 5 | 0.0% | 20.00 | 0.0000 |
-| **CognitiveAgent-FullPipeline** | 5 | 0.0% | 20.00 | 0.0000 |
+| **RandomAgent-Baseline** | 2 | 0.0% | 5.00 | 0.0000 |
+| **CognitiveAgent-FullPipeline** | 2 | 0.0% | 5.00 | 0.0000 |
 
 ## Performance Analysis
 

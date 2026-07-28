@@ -16,15 +16,21 @@ class BaseAgent(ABC):
         self.step_count: int = 0
 
     @abstractmethod
-    def act(self, observation: Dict[str, Any]) -> Any:
-        """Select an action based on current observation payload.
+    def choose_action(self, frames: List[Dict[str, Any]], latest_frame: Dict[str, Any]) -> Any:
+        """Select an action based on frames.
 
         Args:
-            observation: Current environment observation payload.
+            frames: History of frames in the episode.
+            latest_frame: The most recent observation.
 
         Returns:
-            The action to be executed in the environment.
+            The official GameAction to be executed in the environment.
         """
+        pass
+
+    @abstractmethod
+    def is_done(self, frames: List[Dict[str, Any]], latest_frame: Dict[str, Any]) -> bool:
+        """Check if the agent considers the task solved or episode terminated."""
         pass
 
     def record_step(

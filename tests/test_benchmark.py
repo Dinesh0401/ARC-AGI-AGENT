@@ -18,7 +18,7 @@ def test_metrics_collector():
     obs = env.reset()
 
     # Step once
-    action = agent.act(obs)
+    action = agent.choose_action([obs], obs)
     next_obs, reward, done, info = env.step(action)
     agent.record_step(obs, action, reward, info.get("status", "NOT_FINISHED"), info=info)
 

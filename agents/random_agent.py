@@ -23,24 +23,29 @@ class RandomAgent(BaseAgent):
         if seed is not None:
             random.seed(seed)
 
-    def act(self, observation: Dict[str, Any]) -> Any:
+    def is_done(self, frames: List[Dict[str, Any]], latest_frame: Dict[str, Any]) -> bool:
+        return False
+
+    def choose_action(self, frames: List[Dict[str, Any]], latest_frame: Dict[str, Any]) -> Any:
         """Select a random action token or parameterized tuple based on observation payload.
 
         Args:
-            observation: Environment observation payload containing 'available_actions' and 'grid_shape'.
+            frames: History of frames.
+            latest_frame: Environment observation payload.
 
         Returns:
-            Chosen action token string or tuple.
+            Chosen GameAction.
         """
-        available_actions: List[str] = observation.get(
+        from integration.arc_adapter import ActionAdapter
+        
+        available_actions: List[str] = latest_frame.get(
             "available_actions", ["ACTION1", "ACTION2", "ACTION3", "ACTION4"]
         )
-        grid_shape = observation.get("grid_shape", (10, 10))
+        grid_shape = latest_frame.get("grid_shape", (10, 10))
 
         if not available_actions:
-            return "ACTION1"
-
-        if not self.action_weights:
+            chosen = "ACTION1"
+        elif not self.action_weights:
             chosen = random.choice(available_actions)
         else:
             weights = [self.action_weights.get(act, 1.0) for act in available_actions]
@@ -51,6 +56,6 @@ class RandomAgent(BaseAgent):
             h, w = grid_shape[0], grid_shape[1]
             rand_x = random.randint(0, max(0, w - 1))
             rand_y = random.randint(0, max(0, h - 1))
-            return ("ACTION6", rand_x, rand_y)
+            chosen = f"ACTION6({rand_x},{rand_y})"
 
-        return chosen
+        return ActionAdapter.to_game_action(chosen)

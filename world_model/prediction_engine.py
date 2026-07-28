@@ -15,10 +15,13 @@ class PredictionEngine:
         self.state_predictor = StatePredictor(self.simulator, self.uncertainty_quantifier, self.transition_model)
         self.cache: Dict[str, Prediction] = {}
         
+        self.total_predictions = 0
+        self.correct_predictions = 0
+        
     def evaluate_action(self, current_state: SceneGraph, action: str) -> Prediction:
         """Evaluate a single action and return the predicted state with confidence metrics."""
         # Simple cache key: (State Hash, Action)
-        state_hash = "|".join(sorted(f"{oid}:{obj.color}" for oid, obj in current_state.objects.items())) + "_" + action
+        state_hash = "|".join(sorted(f"{oid}:{obj.color}:{obj.centroid}" for oid, obj in current_state.objects.items())) + "_" + action
         if state_hash in self.cache:
             return self.cache[state_hash]
             

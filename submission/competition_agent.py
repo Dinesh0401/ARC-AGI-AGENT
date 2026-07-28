@@ -2,7 +2,7 @@
 
 import time
 import numpy as np
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from agents.cognitive_agent import CognitiveAgent
 from optimization.competition_config import CompetitionConfig, ExecutionMode
 from optimization.scene_hash import SceneHasher
@@ -23,11 +23,14 @@ class CompetitionCognitiveAgent(CognitiveAgent):
         self.memory_optimizer = MemoryOptimizer()
         self.profiler = RuntimeProfiler()
 
-    def act(self, observation: Dict[str, Any]) -> Any:
+    def is_done(self, frames: List[Dict[str, Any]], latest_frame: Dict[str, Any]) -> bool:
+        return super().is_done(frames, latest_frame)
+
+    def choose_action(self, frames: List[Dict[str, Any]], latest_frame: Dict[str, Any]) -> Any:
         """Optimized action loop with caching & latency profiling."""
         t0 = time.time()
 
-        grid_data = observation.get("frame", observation.get("grid", []))
+        grid_data = latest_frame.get("frame", latest_frame.get("grid", []))
         grid = np.array(grid_data) if isinstance(grid_data, list) else grid_data
         grid_hash = self.hasher.hash_grid(grid)
 
@@ -49,7 +52,7 @@ class CompetitionCognitiveAgent(CognitiveAgent):
         self.profiler.record_latency("memory", (time.time() - t_mem) * 1000.0)
 
         # 3. Superclass action execution
-        action = super().act(observation)
+        action = super().choose_action(frames, latest_frame)
 
         total_ms = (time.time() - t0) * 1000.0
         self.profiler.record_latency("total_act", total_ms)

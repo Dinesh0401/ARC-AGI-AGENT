@@ -53,10 +53,13 @@ class AStarPlanner(Planner):
 
     @staticmethod
     def _state_hash(state: SceneGraph) -> str:
-        parts = sorted(f"{oid}:{obj.color}" for oid, obj in state.objects.items())
+        parts = sorted(f"{oid}:{obj.color}:{obj.centroid}" for oid, obj in state.objects.items())
         return "|".join(parts)
 
     def _is_goal_met(self, state: SceneGraph, goal: Goal, path: List[str]) -> bool:
+        # Generic fallback for ARC: we don't have explicit goal states yet
+        # Returning False ensures A* explores fully, but we need it to return the best path eventually.
+        # This will require larger refactoring to make A* return partial plans like Beam Search.
         target_action = goal.target_conditions.get("action")
         if target_action and path and path[-1] == target_action:
             return True

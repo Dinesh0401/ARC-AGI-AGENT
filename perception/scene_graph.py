@@ -17,13 +17,23 @@ class SceneGraph:
         self.edges: Dict[str, List[Tuple[str, Any]]] = {obj.id: [] for obj in objects}
         
         for source_id, rel_type, target in relations:
-            self.edges[source_id].append((rel_type, target))
+            if source_id in self.edges:
+                self.edges[source_id].append((rel_type, target))
             
     def get_object(self, obj_id: str) -> Object:
         return self.objects[obj_id]
         
     def get_relations(self, obj_id: str) -> List[Tuple[str, Any]]:
         return self.edges[obj_id]
+
+    def __hash__(self):
+        # Hash based on the set of objects
+        return hash(frozenset(self.objects.values()))
+
+    def __eq__(self, other):
+        if not isinstance(other, SceneGraph):
+            return False
+        return set(self.objects.values()) == set(other.objects.values())
 
     @property
     def relations(self) -> List[Tuple[str, str, Any]]:

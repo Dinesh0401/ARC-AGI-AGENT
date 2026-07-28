@@ -9,18 +9,8 @@ class RuleLearner:
         self.transition_model = transition_model
         self.semantic = semantic_memory
         
-    def learn_from_transition(self, pre_state: SceneGraph, action: str, actual_post_state: SceneGraph):
+    def learn_from_transition(self, pre_state: SceneGraph, action: str, actual_post_state: SceneGraph, prediction_error: float):
         """
-        Compares pre_state to actual_post_state to infer transition rules.
+        Updates the transition model with the observed error.
         """
-        changed = False
-        # Very basic rule inference for MVP
-        for obj_id, post_obj in actual_post_state.objects.items():
-            pre_obj = pre_state.objects.get(obj_id)
-            if pre_obj and pre_obj.color != post_obj.color:
-                changed = True
-                break
-                
-        if changed:
-            # Add or update the rule in the Transition Model
-            self.transition_model.add_rule(action, {"changes_color": True})
+        self.transition_model.update_from_error(action, prediction_error, actual_post_state, pre_state)

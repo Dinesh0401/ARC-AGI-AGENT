@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Callable, Optional, Dict
+from typing import List, Callable, Optional, Dict, Any
 from perception.scene_graph import SceneGraph
 from reasoning.goal_generator import Goal
 import abc
@@ -12,6 +12,7 @@ class Plan:
     confidence: float
     planner_name: str
     expected_reward: float = 0.0
+    metrics: Dict[str, Any] = field(default_factory=dict)
 
 class Planner(abc.ABC):
     """Abstract base class for all search algorithms."""
@@ -31,8 +32,9 @@ class Planner(abc.ABC):
 class PlanningOrchestrator:
     """Coordinates search algorithms to find a valid action sequence for a Goal."""
     
-    def __init__(self, transition_func: Callable):
+    def __init__(self, transition_func: Callable, value_function: 'ValueFunction' = None):
         self.transition_func = transition_func
+        self.value_function = value_function
         
         # We will lazy-load the planners to avoid circular imports if needed,
         # but since they inherit from Planner, it's fine to import them directly
@@ -40,14 +42,20 @@ class PlanningOrchestrator:
         from .bfs import BFSPlanner
         from .astar import AStarPlanner
         from .mcts import MCTSPlanner
+        from .beam_search import BeamSearchPlanner
         from .action_selector import ActionSelector
         from .plan_evaluator import PlanEvaluator
         
-        self.planners: Dict[str, Planner] = {
-            "bfs": BFSPlanner(transition_func),
-            "astar": AStarPlanner(transition_func),
-            "mcts": MCTSPlanner(transition_func)
-        }
+        self.planners: Dict[str, Planner] = {}
+        
+        # If we have a value function, we can use Beam Search
+        if value_function:
+            self.planners["beam_search"] = BeamSearchPlanner(transition_func, value_function)
+        else:
+            self.planners["bfs"] = BFSPlanner(transition_func)
+            self.planners["astar"] = AStarPlanner(transition_func)
+            self.planners["mcts"] = MCTSPlanner(transition_func)
+            
         self.evaluator = PlanEvaluator()
         self.selector = ActionSelector()
         

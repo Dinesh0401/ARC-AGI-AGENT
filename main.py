@@ -1,28 +1,121 @@
-"""CLI entry point for ARC-AGI-3 research agent baseline, visualizer, benchmarking, and analysis."""
+"""CLI entry point for ARC-AGI-3 Agent."""
 
 import argparse
-import json
-from pathlib import Path
+from typing import List, Any
 from agents.random_agent import RandomAgent
 from agents.cognitive_agent import CognitiveAgent
-from submission.competition_agent import CompetitionCognitiveAgent
-from submission.kaggle_runner import KaggleSubmissionRunner
-from environment.wrapper import ARCEnvironment
-from evaluation.runner import EvaluationRunner
-from benchmark.benchmark_runner import BenchmarkRunner
-from benchmark.report_generator import ReportGenerator
-from benchmark.visualization import BenchmarkVisualizer
 from benchmark.config import DEFAULT_GAMES
-from utils.logger import setup_logger
-from utils.visualizer import render_ansi_grid
-from utils.replay import ReplayLogger, ReplayViewer
-from analysis.frame_statistics import FrameStatistics
-from analysis.action_statistics import ActionStatistics
+
+try:
+    import arc_agi
+except ImportError:
+    arc_agi = None
+
+def run_agent_on_game(agent, arc, game_id: str, render_mode: str = None):
+    """Run a specific agent on a specific game using the official toolkit."""
+    env = arc.make(game_id, render_mode=render_mode)
+    obs = env.reset()
+    
+    # Run the game loop
+    
+    def _to_dict(o: Any) -> dict:
+        if isinstance(o, dict): return o
+        d = {"frame": getattr(o, "frame", []), "available_actions": getattr(o, "available_actions", [])}
+        if hasattr(o, "state"):
+            state_val = getattr(o, "state")
+            d["status"] = getattr(state_val, "value", str(state_val))
+        if hasattr(o, "game_id"): d["game_id"] = getattr(o, "game_id")
+        return d
+
+    # Official toolkit states: obs has 'frame'/'grid' and 'available_actions'
+    obs_dict = _to_dict(obs)
+    frames = [obs_dict]
+    
+    # Reset agent internal memory
+    agent.reset()
+    
+    steps = 0
+    from arcengine import GameAction
+    while steps < 100:  # arbitrary safety limit if env doesn't terminate
+        action = agent.choose_action(frames, obs_dict)
+        
+        # Parse action from string/tuple to GameAction
+        if isinstance(action, tuple) and len(action) == 3:
+            action_name, x, y = action
+            game_action = getattr(GameAction, action_name, GameAction.ACTION1)
+            data = {"x": x, "y": y}
+        else:
+            action_name = str(action)
+            game_action = getattr(GameAction, action_name, GameAction.ACTION1)
+            data = None
+            
+        # Step the environment
+        obs = env.step(game_action, data=data)
+        if obs is None:
+            break
+            
+        obs_dict = _to_dict(obs)
+        frames.append(obs_dict)
+        
+        # Check termination
+        status = obs_dict.get("status")
+        if status in ["WIN", "GAME_OVER"]:
+            break
+        
+        # Or if the agent thinks it's done:
+        if agent.is_done(frames, obs_dict):
+            break
+            
+        steps += 1
+        
+    print(f"Finished {game_id} in {steps} steps. Final Status: {obs_dict.get('status')}")
+    
+    # Print Cognitive Metrics
+    print("\n================ Cognitive Metrics ================")
+    if hasattr(agent, 'memory') and hasattr(agent.memory, 'episodic'):
+        print(f"Unique States Visited: {len(agent.memory.episodic.visit_counts)}")
+    if hasattr(agent, 'hypothesis_engine'):
+        print(f"Hypotheses Generated: {len(agent.hypothesis_engine.hypotheses)}")
+        print(f"Verified: {len(agent.hypothesis_engine.get_verified_hypotheses())}")
+        rejected_count = sum(1 for h in agent.hypothesis_engine.hypotheses.values() if h.status.name == 'REJECTED')
+        print(f"Rejected: {rejected_count}")
+        print(f"Still Active: {len(agent.hypothesis_engine.get_active_hypotheses())}")
+    if hasattr(agent, 'prediction_engine'):
+        total = getattr(agent.prediction_engine, 'total_predictions', 0)
+        correct = getattr(agent.prediction_engine, 'correct_predictions', 0)
+        acc = (correct / total * 100) if total > 0 else 0
+        print(f"Prediction Accuracy: {acc:.1f}% ({correct}/{total})")
+    if hasattr(agent, 'repeated_loop_count'):
+        print(f"Repeated Loop Count: {agent.repeated_loop_count}")
+    if hasattr(agent, 'object_interactions'):
+        print(f"Object Interactions: {agent.object_interactions}")
+    if hasattr(agent, 'planner_invocations'):
+        print(f"Planner Invocations: {agent.planner_invocations}")
+        successes = getattr(agent, 'planner_successes', 0)
+        fallbacks = getattr(agent, 'planner_fallbacks', 0)
+        print(f"Planner Success: {successes}")
+        print(f"Planner Fallback: {fallbacks}")
+        
+        if agent.planner_invocations > 0:
+            avg_conf = getattr(agent, 'total_planner_confidence', 0.0) / agent.planner_invocations
+            avg_score = getattr(agent, 'total_beam_score', 0.0) / agent.planner_invocations
+            print(f"Average Confidence: {avg_conf:.2f}")
+            print(f"Average Beam Score: {avg_score:.2f}")
+            if successes > 0:
+                print(f"Average Planning Depth: {agent.total_planning_depth / successes:.1f}")
+            else:
+                print("Average Planning Depth: 0.0")
+                
+        print(f"Rollouts Expanded: {getattr(agent, 'total_rollouts_expanded', 0)}")
+        print("Unique Predicted States:")
+        for d, count in getattr(agent, 'unique_predicted_states_by_depth', {}).items():
+            print(f"  Depth {d}: {count}")
+    print("===================================================\n")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="ARC-AGI-3 Research Agent Baseline, Visualizer, Benchmark & Trajectory Analysis"
+        description="ARC-AGI-3 Agent Runner"
     )
     parser.add_argument(
         "--agent",
@@ -32,171 +125,66 @@ def main() -> None:
         help="Agent architecture type to evaluate (cognitive or random)",
     )
     parser.add_argument(
-        "--env",
+        "--game",
         type=str,
-        default="sample_game",
-        help="Environment / Game ID to evaluate on",
+        default="ls20",
+        help="Environment / Game ID to evaluate on (e.g. ls20, ft09)",
     )
     parser.add_argument(
-        "--max-steps",
-        type=int,
-        default=20,
-        help="Maximum steps allowed per episode",
+        "--competition",
+        action="store_true",
+        help="Run competition mode against multiple games and print official scorecard",
+    )
+    parser.add_argument(
+        "--fast",
+        action="store_true",
+        help="Disable terminal rendering for faster execution",
     )
     parser.add_argument(
         "--seed",
         type=int,
         default=42,
-        help="Random seed for agent reproducibility",
-    )
-    parser.add_argument(
-        "--benchmark",
-        action="store_true",
-        help="Run multi-episode benchmark evaluation",
-    )
-    parser.add_argument(
-        "--competition",
-        action="store_true",
-        help="Run competition mode with caching, profiling, and Kaggle submission generation",
-    )
-    parser.add_argument(
-        "--num-episodes",
-        type=int,
-        default=5,
-        help="Number of episodes to execute during benchmarking",
-    )
-    parser.add_argument(
-        "--visualize",
-        action="store_true",
-        help="Render live ANSI color grid in terminal after each step",
-    )
-    parser.add_argument(
-        "--save-replay",
-        type=str,
-        default=None,
-        help="Optional path to save JSON trajectory replay",
-    )
-    parser.add_argument(
-        "--view-replay",
-        type=str,
-        default=None,
-        help="Path to saved JSON replay file to play back in terminal",
-    )
-    parser.add_argument(
-        "--analyze",
-        type=str,
-        default=None,
-        help="Path to saved JSON replay file to perform trajectory statistical analysis",
+        help="Random seed",
     )
 
     args = parser.parse_args()
-    logger = setup_logger("main")
 
-    # Competition Submission Mode
-    if args.competition:
-        logger.info("Initializing Competition Optimization Mode...")
-        comp_runner = KaggleSubmissionRunner()
-        sub_path = comp_runner.generate_submission(game_ids=DEFAULT_GAMES, max_steps=args.max_steps)
-
-        # Profile runtime
-        agent = CompetitionCognitiveAgent(name="CompAgent-Profile")
-        env = ARCEnvironment(game_id=args.env)
-        obs = env.reset()
-        for _ in range(3):
-            action = agent.act(obs)
-            obs, _, _, _ = env.step(action)
-
-        agent.profiler.save_report()
-        logger.info(f"Kaggle Submission payload created at: {sub_path}")
-        logger.info("Runtime profiling report saved to results/runtime_profile.csv")
+    if arc_agi is None:
+        print("ERROR: Official 'arc-agi' toolkit is not installed. Please run 'pip install arc-agi'")
         return
 
-    # Analyze trajectory replay mode
-    if args.analyze:
-        replay_path = Path(args.analyze)
-        if not replay_path.exists():
-            logger.error(f"Replay file '{replay_path}' does not exist.")
-            return
-        with open(replay_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        trajectory = data.get("trajectory", [])
-
-        frame_stats = FrameStatistics.analyze_trajectory_frames(trajectory)
-        action_stats = ActionStatistics.analyze_action_trajectory(trajectory)
-
-        print(f"\n================ TRAJECTORY ANALYSIS: {data.get('game_id')} ================")
-        print(f"Total Steps: {action_stats['total_actions']}")
-        print(f"Final Status: {data.get('final_status')}")
-        print(f"Action Counts: {action_stats['action_counts']}")
-        print(f"Complex Actions (ACTION6): {action_stats['complex_action_count']}")
-        print(f"Avg Modified Cells/Step: {frame_stats['avg_frame_diff_cells']}")
-        print(f"Max Modified Cells/Step: {frame_stats['max_frame_diff_cells']}")
-        print(f"Color Histogram (0-15): {frame_stats['overall_color_distribution']}")
-        print("========================================================================\n")
-        return
-
-    # View trajectory replay mode
-    if args.view_replay:
-        replay_path = Path(args.view_replay)
-        if not replay_path.exists():
-            logger.error(f"Replay file '{replay_path}' does not exist.")
-            return
-        viewer = ReplayViewer(replay_path)
-        viewer.display_terminal_replay()
-        return
-
-    env = ARCEnvironment(game_id=args.env)
+    arc = arc_agi.Arcade()
 
     if args.agent == "random":
-        agent = RandomAgent(name="RandomAgent-Baseline", seed=args.seed)
+        agent = RandomAgent(name="RandomAgent", seed=args.seed)
     else:
-        agent = CognitiveAgent(name="CognitiveAgent-FullPipeline", seed=args.seed)
+        agent = CognitiveAgent(name="CognitiveAgent", seed=args.seed)
 
-    # Multi-episode Benchmark mode
-    if args.benchmark:
-        benchmark_runner = BenchmarkRunner(agent=agent, env=env)
-        metrics = benchmark_runner.run_benchmark(
-            num_episodes=args.num_episodes, max_steps=args.max_steps
-        )
+    render_mode = None if args.fast else "terminal"
 
-        # Generate report and charts
-        report_gen = ReportGenerator()
-        report_gen.generate_report({agent.name: metrics})
-        visualizer = BenchmarkVisualizer()
-        visualizer.generate_plots({agent.name: metrics})
-
-        print("\n================ BENCHMARK SUMMARY ================")
-        print(f"Agent: {metrics['agent_name']}")
-        print(f"Total Episodes: {metrics['total_episodes']}")
-        print(f"Win Rate: {metrics['win_rate_percent']}%")
-        print(f"Avg Steps/Episode: {metrics['avg_steps']}")
-        print(f"Avg Efficiency Score: {metrics['avg_efficiency']}")
-        print("Results saved to results/results.csv and results/results.json")
-        print("===================================================\n")
-        return
-
-    # Single episode execution loop with optional visualizer & replay logging
-    logger.info(f"Initializing single episode evaluation for agent '{agent.name}'...")
-    runner = EvaluationRunner(agent=agent, env=env)
-    replay_logger = ReplayLogger(game_id=args.env) if args.save_replay else None
-
-    result = runner.run_episode(
-        max_steps=args.max_steps, replay_logger=replay_logger
-    )
-
-    if args.visualize:
-        print("\n--- SINGLE EPISODE STEP TRAJECTORY ---")
-        for rec in agent.history.records:
-            print(
-                f"Step {rec.step} | Action: {rec.action} | Status: {rec.status} | Diff: {rec.diff_cells} cells"
-            )
-        print()
-
-    if replay_logger and args.save_replay:
-        replay_logger.save(Path(args.save_replay))
-
-    summary = agent.history.get_summary()
-    logger.info(f"Episode Completed! Final Status: {result['status']} | Summary: {summary}")
+    if args.competition:
+        print("Running in Competition Mode...")
+        # Run on a predefined set of games or all public games if available
+        games_to_run = ["ls20", "ft09", "ar25", "bp35", "cd82"]  # Just a sample, would ideally list all 25
+        for g_id in games_to_run:
+            print(f"\n--- Running Game: {g_id} ---")
+            try:
+                run_agent_on_game(agent, arc, g_id, render_mode=render_mode)
+            except Exception as e:
+                print(f"Error running game {g_id}: {e}")
+        
+        # Official Scorecard
+        print("\n================ OFFICIAL SCORECARD ================")
+        print(arc.get_scorecard())
+        print("====================================================")
+    else:
+        # Run single game
+        print(f"Running single game: {args.game}")
+        run_agent_on_game(agent, arc, args.game, render_mode=render_mode)
+        
+        print("\n================ OFFICIAL SCORECARD ================")
+        print(arc.get_scorecard())
+        print("====================================================")
 
 
 if __name__ == "__main__":

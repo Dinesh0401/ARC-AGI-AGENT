@@ -41,9 +41,11 @@ class EvaluationRunner:
         step_count = 0
         status = "NOT_FINISHED"
 
+        frames = [obs]
+
         for step in range(1, max_steps + 1):
             t0 = time.time()
-            action = self.agent.act(obs)
+            action = self.agent.choose_action(frames, obs)
             duration_ms = (time.time() - t0) * 1000.0
 
             next_obs, reward, done, info = self.env.step(action)
@@ -78,6 +80,7 @@ class EvaluationRunner:
             step_count = step
 
             obs = next_obs
+            frames.append(obs)
             if done or status in ["WIN", "GAME_OVER"]:
                 break
 

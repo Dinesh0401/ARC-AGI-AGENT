@@ -26,6 +26,15 @@ class Object:
     visited: bool = False
     
     features: dict = field(default_factory=dict)
+    
+    def __hash__(self):
+        # Hash based on physical properties that define the object uniquely in the grid
+        return hash((self.color, tuple(sorted(self.pixels))))
+
+    def __eq__(self, other):
+        if not isinstance(other, Object):
+            return False
+        return self.color == other.color and sorted(self.pixels) == sorted(other.pixels)
 
 class ObjectParser:
     """Parses a 2D grid into a list of Object representations."""

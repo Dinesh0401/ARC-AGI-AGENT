@@ -43,3 +43,75 @@ CognitiveAgent-FullPipeline,sample_game,2,NOT_FINISHED,False,20,0.0,0.0,0.038,Ma
 CognitiveAgent-FullPipeline,sample_game,3,NOT_FINISHED,False,20,0.0,0.0,0.037,Max step limit reached before goal state,Object Perception,mcts,12.5,1.0,0,4
 CognitiveAgent-FullPipeline,sample_game,4,NOT_FINISHED,False,20,0.0,0.0,0.045,Max step limit reached before goal state,Object Perception,mcts,12.5,0.5,0,4
 CognitiveAgent-FullPipeline,sample_game,5,NOT_FINISHED,False,20,0.0,0.0,0.034,Max step limit reached before goal state,Object Perception,mcts,12.5,0.5,0,4
+RandomAgent-Baseline,sample_game,1,NOT_FINISHED,False,5,0.0,0.0,0.271,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+RandomAgent-Baseline,sample_game,2,NOT_FINISHED,False,5,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+Random Baseline,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+Random Baseline,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+RandomAgent-Baseline,sample_game,1,NOT_FINISHED,False,5,0.0,0.0,0.017,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+RandomAgent-Baseline,sample_game,2,NOT_FINISHED,False,5,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+Random Baseline,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+Random Baseline,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+RandomAgent-Baseline,sample_game,1,NOT_FINISHED,False,5,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+RandomAgent-Baseline,sample_game,2,NOT_FINISHED,False,5,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+CognitiveAgent-FullPipeline,sample_game,1,NOT_FINISHED,False,5,0.0,0.0,0.009,World Model prediction confidence dropped,Object Perception,mcts,12.5,1.0,0,0
+CognitiveAgent-FullPipeline,sample_game,2,NOT_FINISHED,False,5,0.0,0.0,0.0,World Model prediction confidence dropped,Object Perception,mcts,12.5,1.0,0,0
+Random Baseline,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+Full Cognitive Agent,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,World Model prediction confidence dropped,Object Perception,mcts,12.5,1.0,0,0
+w/o Memory,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.003,World Model prediction confidence dropped,Object Perception,N/A,0.0,1.0,0,0
+w/o World Model,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.004,Frontier search exhausted available actions,Object Perception,mcts,12.5,0.0,0,0
+w/o Planning,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,World Model prediction confidence dropped,Object Perception,N/A,0.0,1.0,0,0
+w/o Learning,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.015,World Model prediction confidence dropped,Object Perception,mcts,12.5,1.0,0,0
+Random Baseline,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+Full Cognitive Agent,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.006,World Model prediction confidence dropped,Object Perception,mcts,12.5,1.0,0,0
+w/o Memory,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.004,World Model prediction confidence dropped,Object Perception,N/A,0.0,1.0,0,0
+w/o World Model,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,mcts,12.5,0.0,0,0
+w/o Planning,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,World Model prediction confidence dropped,Object Perception,N/A,0.0,1.0,0,0
+w/o Learning,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,World Model prediction confidence dropped,Object Perception,mcts,12.5,1.0,0,0
+RandomAgent-Baseline,sample_game,1,NOT_FINISHED,False,5,0.0,0.0,0.01,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+RandomAgent-Baseline,sample_game,2,NOT_FINISHED,False,5,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+CognitiveAgent-FullPipeline,sample_game,1,NOT_FINISHED,False,5,0.0,0.0,0.022,Frontier search exhausted available actions,Object Perception,mcts,12.5,0.5,0,3
+CognitiveAgent-FullPipeline,sample_game,2,NOT_FINISHED,False,5,0.0,0.0,0.017,World Model prediction confidence dropped,Object Perception,mcts,12.5,1.0,0,3
+Random Baseline,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+Full Cognitive Agent,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.004,World Model prediction confidence dropped,Object Perception,mcts,12.5,1.0,0,1
+w/o Memory,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.005,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.5,0,1
+w/o World Model,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.005,Frontier search exhausted available actions,Object Perception,mcts,12.5,0.0,0,1
+w/o Planning,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.004,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.5,0,1
+w/o Learning,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.006,World Model prediction confidence dropped,Object Perception,mcts,12.5,1.0,0,0
+Random Baseline,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+Full Cognitive Agent,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.005,Frontier search exhausted available actions,Object Perception,mcts,12.5,0.5,0,1
+w/o Memory,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.5,0,1
+w/o World Model,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.004,Frontier search exhausted available actions,Object Perception,mcts,12.5,0.0,0,1
+w/o Planning,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.5,0,1
+w/o Learning,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.009,World Model prediction confidence dropped,Object Perception,mcts,12.5,1.0,0,0
+RandomAgent-Baseline,sample_game,1,NOT_FINISHED,False,5,0.0,0.0,0.001,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+RandomAgent-Baseline,sample_game,2,NOT_FINISHED,False,5,0.0,0.0,0.001,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+CognitiveAgent-FullPipeline,sample_game,1,NOT_FINISHED,False,5,0.0,0.0,0.018,Frontier search exhausted available actions,Object Perception,mcts,12.5,0.5,0,3
+CognitiveAgent-FullPipeline,sample_game,2,NOT_FINISHED,False,5,0.0,0.0,0.021,World Model prediction confidence dropped,Object Perception,mcts,12.5,1.0,0,3
+Random Baseline,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+Full Cognitive Agent,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.007,World Model prediction confidence dropped,Object Perception,mcts,12.5,1.0,0,1
+w/o Memory,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.003,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.5,0,1
+w/o World Model,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.004,Frontier search exhausted available actions,Object Perception,mcts,12.5,0.0,0,1
+w/o Planning,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.003,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.5,0,1
+w/o Learning,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.004,World Model prediction confidence dropped,Object Perception,mcts,12.5,1.0,0,0
+Random Baseline,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+Full Cognitive Agent,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.005,Frontier search exhausted available actions,Object Perception,mcts,12.5,0.5,0,1
+w/o Memory,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.003,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.5,0,1
+w/o World Model,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.004,Frontier search exhausted available actions,Object Perception,mcts,12.5,0.0,0,1
+w/o Planning,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.003,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.5,0,1
+w/o Learning,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.005,World Model prediction confidence dropped,Object Perception,mcts,12.5,1.0,0,0
+RandomAgent-Baseline,sample_game,1,NOT_FINISHED,False,5,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+RandomAgent-Baseline,sample_game,2,NOT_FINISHED,False,5,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+CognitiveAgent-FullPipeline,sample_game,1,NOT_FINISHED,False,5,0.0,0.0,0.009,Frontier search exhausted available actions,Object Perception,mcts,12.5,0.5,0,3
+CognitiveAgent-FullPipeline,sample_game,2,NOT_FINISHED,False,5,0.0,0.0,0.01,World Model prediction confidence dropped,Object Perception,mcts,12.5,1.0,0,3
+Random Baseline,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+Full Cognitive Agent,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.002,World Model prediction confidence dropped,Object Perception,mcts,12.5,1.0,0,1
+w/o Memory,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.5,0,1
+w/o World Model,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,mcts,12.5,0.0,0,1
+w/o Planning,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.5,0,1
+w/o Learning,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,World Model prediction confidence dropped,Object Perception,mcts,12.5,1.0,0,0
+Random Baseline,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.0,0,0
+Full Cognitive Agent,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.003,Frontier search exhausted available actions,Object Perception,mcts,12.5,0.5,0,1
+w/o Memory,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.5,0,1
+w/o World Model,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.0,Frontier search exhausted available actions,Object Perception,mcts,12.5,0.0,0,1
+w/o Planning,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.027,Frontier search exhausted available actions,Object Perception,N/A,0.0,0.5,0,1
+w/o Learning,sample_game,1,NOT_FINISHED,False,2,0.0,0.0,0.015,World Model prediction confidence dropped,Object Perception,mcts,12.5,1.0,0,0

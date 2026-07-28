@@ -21,7 +21,7 @@ class BFSPlanner(Planner):
             current_state, path = queue.pop(0)
             nodes_explored += 1
             
-            if self._is_goal_met(current_state, goal, path):
+            if self._is_goal_met(current_state, initial_state, goal, path):
                 return Plan(
                     actions=path,
                     estimated_cost=float(len(path)),
@@ -49,8 +49,22 @@ class BFSPlanner(Planner):
         parts = sorted(f"{oid}:{obj.color}" for oid, obj in state.objects.items())
         return "|".join(parts)
 
-    def _is_goal_met(self, state: SceneGraph, goal: Goal, path: List[str]) -> bool:
-        target_action = goal.target_conditions.get("action")
-        if target_action and path and path[-1] == target_action:
-            return True
+    def _is_goal_met(self, state: SceneGraph, initial_state: SceneGraph, goal: Goal, path: List[str]) -> bool:
+        if goal.target_conditions.get("type") == "VerifyHypothesis":
+            target_obj_id = goal.target_conditions.get("target_obj")
+            expected_effect = goal.target_conditions.get("expected_effect")
+            target_action = goal.target_conditions.get("target_action")
+            
+            # If the plan executes the exact action we want to test, that's a valid plan.
+            if path and path[-1] == target_action:
+                return True
+                
+            # Or if the predicted state shows the effect we wanted
+            if target_obj_id in state.objects and target_obj_id in initial_state.objects:
+                obj = state.objects[target_obj_id]
+                old_obj = initial_state.objects[target_obj_id]
+                if expected_effect == "moves" and obj.centroid != old_obj.centroid:
+                    return True
+                if expected_effect == "changes_color" and obj.color != old_obj.color:
+                    return True
         return False

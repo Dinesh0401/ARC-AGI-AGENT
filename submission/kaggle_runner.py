@@ -26,13 +26,15 @@ class KaggleSubmissionRunner:
 
             obs = env.reset()
             agent.on_episode_start()
+            frames = [obs]
             game_actions = []
 
             for step in range(1, max_steps + 1):
-                action = agent.act(obs)
+                action = agent.choose_action(frames, obs)
                 game_actions.append(action)
                 next_obs, reward, done, info = env.step(action)
                 obs = next_obs
+                frames.append(obs)
                 if done or info.get("status") in ["WIN", "GAME_OVER"]:
                     break
 

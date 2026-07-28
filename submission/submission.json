@@ -1,0 +1,80 @@
+{
+  "sample_game": {
+    "actions": [
+      "ACTION2",
+      "ACTION1",
+      "ACTION1",
+      "ACTION3",
+      "ACTION3",
+      "ACTION6",
+      "ACTION6",
+      "ACTION4",
+      "ACTION1",
+      "ACTION4",
+      "ACTION4",
+      "ACTION3",
+      "ACTION1",
+      "ACTION6",
+      "ACTION2",
+      "ACTION3",
+      "ACTION1",
+      "ACTION2",
+      "ACTION6",
+      "ACTION4"
+    ],
+    "status": "NOT_FINISHED",
+    "total_steps": 20
+  },
+  "public_game_01": {
+    "actions": [
+      "ACTION6",
+      "ACTION2",
+      "ACTION6",
+      "ACTION2",
+      "ACTION3",
+      "ACTION1",
+      "ACTION6",
+      "ACTION6",
+      "ACTION3",
+      "ACTION4",
+      "ACTION2",
+      "ACTION2",
+      "ACTION6",
+      "ACTION6",
+      "ACTION6",
+      "ACTION1",
+      "ACTION4",
+      "ACTION1",
+      "ACTION1",
+      "ACTION1"
+    ],
+    "status": "NOT_FINISHED",
+    "total_steps": 20
+  },
+  "public_game_02": {
+    "actions": [
+      "ACTION2",
+      "ACTION1",
+      "ACTION6",
+      "ACTION3",
+      "ACTION6",
+      "ACTION3",
+      "ACTION3",
+      "ACTION2",
+      "ACTION2",
+      "ACTION4",
+      "ACTION3",
+      "ACTION6",
+      "ACTION3",
+      "ACTION4",
+      "ACTION6",
+      "ACTION1",
+      "ACTION3",
+      "ACTION6",
+      "ACTION1",
+      "ACTION2"
+    ],
+    "status": "NOT_FINISHED",
+    "total_steps": 20
+  }
+}

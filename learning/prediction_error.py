@@ -8,6 +8,8 @@ class PredictionErrorCalculator:
         """
         Returns a float between 0.0 (perfect match) and 1.0 (complete mismatch).
         """
+        if prediction is None:
+            return 1.0  # No prediction available (e.g. world model disabled)
         predicted_state = prediction.predicted_state
         
         # Simple heuristic for MVP: Compare object colors

@@ -13,15 +13,26 @@ class TransitionModel:
         
     def apply_rules(self, state: SceneGraph, action: str) -> SceneGraph:
         """Applies known transition rules to a clone of the state."""
-        # For phase 7 MVP, we just return the state un-mutated unless it's our test action.
-        # Deepcopy would be ideal, but for the MVP we will reconstruct or just mock.
-        import copy
-        new_state = copy.deepcopy(state)
+        from perception.object_parser import Object
         
         rule = self.rules.get(action)
+        
         if rule and rule.get("changes_color"):
-            # Dummy logic for testing
-            for obj in new_state.objects.values():
-                obj.color = (obj.color + 1) % 10
-                
-        return new_state
+            # Only clone when we actually need to mutate
+            new_objects = []
+            for obj in state.objects.values():
+                new_obj = Object(
+                    id=obj.id,
+                    color=(obj.color + 1) % 10,
+                    pixels=obj.pixels,  # share reference, don't copy
+                    centroid=obj.centroid,
+                    bbox=obj.bbox,
+                    area=obj.area,
+                    perimeter=obj.perimeter,
+                    shape=obj.shape,
+                )
+                new_objects.append(new_obj)
+            return SceneGraph(new_objects, state.relations)
+        
+        # No mutation needed — return state as-is (immutable usage)
+        return state

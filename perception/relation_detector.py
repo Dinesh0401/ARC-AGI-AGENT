@@ -2,11 +2,15 @@ from typing import List, Tuple, Any
 import math
 from .object_parser import Object
 
-def detect_relations(objects: List[Object]) -> List[Tuple[str, str, Any]]:
+def detect_relations(objects: List[Object], max_objects: int = 20) -> List[Tuple[str, str, Any]]:
     """Detect relationships between objects.
     Returns a list of tuples: (source_id, relation_type, target_id_or_value)
     """
     relations = []
+
+    # Skip expensive O(n²) relation detection when too many objects
+    if len(objects) > max_objects:
+        return relations
     
     for i, obj_a in enumerate(objects):
         for j, obj_b in enumerate(objects):
@@ -78,3 +82,10 @@ def detect_relations(objects: List[Object]) -> List[Tuple[str, str, Any]]:
                     relations.append((obj_a.id, "Adjacent", obj_b.id))
                     
     return relations
+
+
+class RelationDetector:
+    """Class wrapper for relation detection between objects."""
+    
+    def detect_relations(self, objects: List[Object]) -> List[Tuple[str, str, Any]]:
+        return detect_relations(objects)

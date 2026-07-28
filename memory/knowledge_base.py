@@ -39,3 +39,9 @@ class KnowledgeBase:
             if attrs.get(attribute) == value:
                 results.append(obj_id)
         return results
+
+    def update_fact(self, obj_id: str, attributes: Dict[str, Any]) -> None:
+        """Update or insert facts for a single object."""
+        if obj_id not in self.facts:
+            self.facts[obj_id] = {}
+        self.facts[obj_id].update(attributes)

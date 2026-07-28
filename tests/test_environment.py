@@ -10,7 +10,7 @@ def test_environment_reset() -> None:
 
     assert obs["game_id"] == "test_game"
     assert obs["step"] == 0
-    assert obs["grid_shape"] == (5, 5)
+    assert obs["grid_shape"] == [5, 5]
     assert len(obs["available_actions"]) > 0
     assert not obs["done"]
 

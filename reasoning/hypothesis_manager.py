@@ -14,5 +14,5 @@ class HypothesisManager:
             if b.hypothesis == hypothesis_text:
                 return b.id
                 
-        belief_id = self.belief_memory.add_belief(hypothesis_text, initial_confidence)
+        belief_id = self.belief_memory.add_belief(hypothesis_text, confidence=initial_confidence)
         return belief_id

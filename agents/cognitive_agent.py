@@ -127,9 +127,9 @@ class CognitiveAgent(BaseAgent):
         # 3. Knowledge Base Update (If memory enabled)
         if self.enable_memory:
             self.memory.knowledge_base.facts.clear()
-            for obj_id, obj in objects.items():
+            for obj in objects:
                 self.memory.knowledge_base.update_fact(
-                    obj_id,
+                    obj.id,
                     {
                         "color": obj.color,
                         "area": obj.area,

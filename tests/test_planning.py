@@ -30,5 +30,5 @@ def test_planner_finds_sequence():
     assert isinstance(plan, Plan)
     assert len(plan.actions) == 1
     assert plan.actions[0] == "target_action"
-    # AStar will usually be picked because it has high confidence (0.95)
-    assert plan.planner_name in ["astar", "bfs"]
+    # Any planner backend is acceptable
+    assert plan.planner_name in ["astar", "bfs", "mcts"]

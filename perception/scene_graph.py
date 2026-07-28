@@ -25,6 +25,15 @@ class SceneGraph:
     def get_relations(self, obj_id: str) -> List[Tuple[str, Any]]:
         return self.edges[obj_id]
 
+    @property
+    def relations(self) -> List[Tuple[str, str, Any]]:
+        """Return all relations as a flat list of (source_id, relation_type, target) tuples."""
+        all_rels = []
+        for obj_id, rels in self.edges.items():
+            for rel_type, target in rels:
+                all_rels.append((obj_id, rel_type, target))
+        return all_rels
+
 def parse_grid_to_graph(grid: np.ndarray, bg_color: int = 0) -> SceneGraph:
     """Parse a grid into a SceneGraph."""
     components = find_connected_components(grid, bg_color=bg_color, connectivity=8)

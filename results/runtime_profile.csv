@@ -1,0 +1,7 @@
+module,avg_ms,max_ms,calls
+perception,0.361,0.547,3
+memory,0.001,0.002,3
+reasoning,0.0,0.0,0
+planning,0.0,0.0,0
+world_model,0.0,0.0,0
+learning,0.0,0.0,0

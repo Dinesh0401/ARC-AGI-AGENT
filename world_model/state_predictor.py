@@ -30,16 +30,32 @@ class StatePredictor:
         
         confidence = 1.0 - uncertainty
         
+        # Fast path: if simulator returned the same object, nothing changed
+        if predicted_state is current_state:
+            return Prediction(
+                predicted_state=predicted_state,
+                confidence=confidence,
+                uncertainty=uncertainty,
+                prediction_error_likelihood=uncertainty,
+                changed_objects=[],
+                new_relations=[]
+            )
+        
         # Calculate diffs
         changed_objects = []
         for obj_id, obj in predicted_state.objects.items():
             curr_obj = current_state.objects.get(obj_id)
-            if not curr_obj or curr_obj.color != obj.color: # Simplified comparison for MVP
+            if not curr_obj or curr_obj.color != obj.color:
                 changed_objects.append(obj_id)
                 
+        # Use sets for O(n) relation diff instead of O(n²)
+        current_rel_set = set(
+            (src, rtype, str(tgt)) for src, rtype, tgt in current_state.relations
+        )
         new_relations = []
         for rel in predicted_state.relations:
-            if rel not in current_state.relations:
+            rel_key = (rel[0], rel[1], str(rel[2]))
+            if rel_key not in current_rel_set:
                 new_relations.append(str(rel))
         
         return Prediction(

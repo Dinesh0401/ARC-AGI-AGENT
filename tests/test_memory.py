@@ -10,16 +10,20 @@ def test_working_memory():
     
     thoughts = mem.working.get_thoughts()
     assert len(thoughts) == 2
-    assert "Need key" in thoughts
+    thought_texts = [t.text for t in thoughts]
+    assert "Need key" in thought_texts
     
-    # Test capacity eviction
+    # Test capacity eviction with explicit priorities
     for i in range(15):
-        mem.working.add_thought(f"Thought {i}")
+        mem.working.add_thought(f"Thought {i}", priority=i)
         
     thoughts = mem.working.get_thoughts()
     assert len(thoughts) == 10
-    assert "Thought 14" in thoughts
-    assert "Need key" not in thoughts
+    thought_texts = [t.text for t in thoughts]
+    # Highest priority thoughts (priorities 5-14) should survive
+    assert "Thought 14" in thought_texts
+    # Lowest priority thoughts (priorities 0-4) should be evicted
+    assert "Need key" not in thought_texts
 
 def test_semantic_memory():
     mem = CognitiveMemory()
@@ -31,11 +35,24 @@ def test_semantic_memory():
     
 def test_procedural_memory():
     mem = CognitiveMemory()
-    mem.procedural.add_strategy(["ACTION1", "ACTION2"], success=True)
-    mem.procedural.add_strategy(["ACTION3"], success=False)
+    mem.procedural.add_strategy(
+        situation={"has_key": True},
+        strategy=["ACTION1", "ACTION2"],
+        outcome="Success"
+    )
+    mem.procedural.add_strategy(
+        situation={"has_key": False},
+        strategy=["ACTION3"],
+        outcome="Failed"
+    )
     
-    assert ["ACTION1", "ACTION2"] in mem.procedural.get_successful_strategies()
-    assert ["ACTION3"] in mem.procedural.get_failed_strategies()
+    successful = mem.procedural.get_successful_strategies()
+    assert len(successful) == 1
+    assert successful[0].strategy == ["ACTION1", "ACTION2"]
+    
+    failed = mem.procedural.get_failed_strategies()
+    assert len(failed) == 1
+    assert failed[0].strategy == ["ACTION3"]
 
 def test_knowledge_base():
     mem = CognitiveMemory()

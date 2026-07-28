@@ -56,7 +56,7 @@ class MetricsCollector:
         if hasattr(agent, "memory"):
             mem = getattr(agent, "memory")
             mem_metrics = MemoryMetrics(
-                episodic_size=len(mem.episodic.records),
+                episodic_size=len(mem.episodic.episodes),
                 semantic_rules_count=len(mem.semantic.get_rules()),
                 beliefs_count=len(mem.belief_memory.get_all_beliefs()),
                 working_thoughts_count=len(mem.working.get_thoughts()),

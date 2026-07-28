@@ -30,6 +30,7 @@ def test_reasoning_pipeline():
     
     b_id = new_beliefs[0]
     belief = mem.belief_memory.get_belief(b_id)
+    # InferenceEngine calls generate_hypothesis with initial_confidence=0.6
     assert belief.confidence == 0.6
     assert "Applying ACTION1 on Object_001 will succeed." in belief.hypothesis
     

@@ -8,13 +8,20 @@ from .planner import Planner, Plan
 class AStarPlanner(Planner):
     """A* Search using h(n) estimating distance to Goal."""
     
+    def __init__(self, transition_func, max_depth: int = 3, max_nodes: int = 50):
+        super().__init__(transition_func)
+        self.max_depth = max_depth
+        self.max_nodes = max_nodes
+    
     def plan(self, initial_state: SceneGraph, goal: Goal, available_actions: List[str]) -> Optional[Plan]:
-        initial_hash = str(initial_state.objects.keys())
+        initial_hash = self._state_hash(initial_state)
         pq = [(0 + heuristic_distance(initial_state, goal), 0, [], initial_hash, initial_state)]
         visited = set()
+        nodes_explored = 0
         
         while pq:
             f_score, g_score, path, state_hash, current_state = heapq.heappop(pq)
+            nodes_explored += 1
             
             if self._is_goal_met(current_state, goal, path):
                 return Plan(
@@ -28,10 +35,14 @@ class AStarPlanner(Planner):
             if state_hash in visited:
                 continue
             visited.add(state_hash)
+
+            # Enforce depth and node limits
+            if len(path) >= self.max_depth or nodes_explored >= self.max_nodes:
+                continue
             
             for action in available_actions:
                 next_state = self.transition_func(current_state, action)
-                next_hash = str(next_state.objects.keys())
+                next_hash = self._state_hash(next_state)
                 
                 if next_hash not in visited:
                     new_g = g_score + evaluate_cost(action, current_state)
@@ -39,6 +50,11 @@ class AStarPlanner(Planner):
                     heapq.heappush(pq, (new_g + new_h, new_g, path + [action], next_hash, next_state))
                     
         return None
+
+    @staticmethod
+    def _state_hash(state: SceneGraph) -> str:
+        parts = sorted(f"{oid}:{obj.color}" for oid, obj in state.objects.items())
+        return "|".join(parts)
 
     def _is_goal_met(self, state: SceneGraph, goal: Goal, path: List[str]) -> bool:
         target_action = goal.target_conditions.get("action")

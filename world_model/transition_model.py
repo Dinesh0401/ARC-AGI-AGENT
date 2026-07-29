@@ -105,14 +105,9 @@ class TransitionModel:
                             obj_effects["changes_shape"] = True
                     
                     if obj_effects:
-                        # Extract non-float relations for preconditions
-                        rels = pre_state.get_relations(obj_id)
+                        # Do NOT extract relations for preconditions. 
+                        # Overfitting to spatial relations causes rules to break as soon as objects move.
                         safe_rels = []
-                        for rel in rels:
-                            # rel is (relation_type, target)
-                            # Only keep structural relations, ignore complex dict values like Distance
-                            if isinstance(rel[1], str):
-                                safe_rels.append(rel)
                                 
                         new_rule = TransitionRule(
                             effects=obj_effects,

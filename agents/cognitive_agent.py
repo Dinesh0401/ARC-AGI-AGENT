@@ -139,6 +139,13 @@ class CognitiveAgent(BaseAgent):
         # 1. Update Object Tracker and Episodic Memory
         self.object_tracker.track_scene(current_scene, self.last_action)
         
+        # Track player visited tiles
+        for obj_id, obj in self.object_tracker.tracked_objects.items():
+            if obj.is_movable and obj_id in current_scene.objects:
+                centroid = current_scene.objects[obj_id].centroid
+                self.memory.episodic.visited_tiles.add((int(centroid[0]), int(centroid[1])))
+                break
+                
         if self.enable_memory and self.last_scene_graph and self.last_action:
             # We assume a sparse reward (0) for now until the level ends
             self.memory.episodic.add_experience(self.last_scene_graph, self.last_action, 0.0, current_scene)
@@ -187,14 +194,43 @@ class CognitiveAgent(BaseAgent):
             if not self.memory.working.get_thoughts():
                 self.memory.working.add_thought("Need to explore environment", priority=5)
 
+        # 3b. Anti-Loop & Stall Detection (Run BEFORE planning)
+        current_hash = "|".join(sorted(f"{obj.color}:{round(obj.centroid[0], 1)},{round(obj.centroid[1], 1)}" for obj in current_scene.objects.values()))
+        if not hasattr(self, 'state_history'):
+            self.state_history = []
+        self.state_history.append(current_hash)
+        if len(self.state_history) > 10:
+            self.state_history.pop(0)
+            
+        if not hasattr(self, 'recent_actions'):
+            self.recent_actions = []
+        
+        is_stalled = False
+        banned_actions = set()
+        
+        # Check for A1 A2 A1 A2 oscillation
+        if len(self.recent_actions) >= 4:
+            a1, a2, a3, a4 = self.recent_actions[-4:]
+            if a1 == a3 and a2 == a4 and a1 != a2:
+                is_stalled = True
+                banned_actions.update([a1, a2])
+                import logging
+                logging.warning(f"Oscillation detected! Banning {a1} and {a2}.")
+                
+        # Check for state stalling (no progress)
+        if len(self.state_history) >= 4 and len(set(self.state_history[-4:])) == 1:
+            is_stalled = True
+            import logging
+            logging.warning("Agent stalled in same state for 3 steps! Enforcing exploration.")
+            
         # 4. Goal Generation & Planning (If planning enabled)
         selected_internal_action = None
-        if self.enable_planning:
+        if self.enable_planning and not is_stalled:
             goals = self.goal_generator.generate_goals(current_scene, self.object_tracker) if self.enable_memory else []
             if goals:
                 top_goal = goals[0]
                 valid_actions = [
-                    a for a in available_actions if isinstance(a, str) and a != "RESET"
+                    a for a in available_actions if isinstance(a, str) and a != "RESET" and a not in banned_actions
                 ]
                 if not valid_actions:
                     valid_actions = ["ACTION1", "ACTION2", "ACTION3", "ACTION4"]
@@ -223,41 +259,36 @@ class CognitiveAgent(BaseAgent):
                     else:
                         self.planner_fallbacks += 1
 
-        # 4b. Anti-Loop & Stall Detection
-        current_hash = hash(current_scene)
-        if not hasattr(self, 'state_history'):
-            self.state_history = []
-        self.state_history.append(current_hash)
-        if len(self.state_history) > 10:
-            self.state_history.pop(0)
-            
-        is_stalled = False
-        if len(self.state_history) >= 4 and len(set(self.state_history[-4:])) == 1:
-            is_stalled = True
-            import logging
-            logging.warning("Agent stalled for 3 steps! Resetting hypotheses and enforcing exploration.")
-            self.hypothesis_engine.hypotheses.clear()
-            self.active_plan = None
-            selected_internal_action = None
+        if selected_internal_action:
+            self.recent_actions.append(selected_internal_action)
+            if len(self.recent_actions) > 10:
+                self.recent_actions.pop(0)
 
         # Fallback to intelligent action selection (Curiosity) if planner lacks confidence or stalled
         if selected_internal_action is None:
             valid_actions = [
-                a for a in available_actions if isinstance(a, str) and a != "RESET"
+                a for a in available_actions if isinstance(a, str) and a != "RESET" and a not in banned_actions
             ]
+            if not valid_actions:
+                valid_actions = ["ACTION1", "ACTION2", "ACTION3", "ACTION4"]
+                
             if valid_actions:
                 if is_stalled:
-                    # Force random action that is different from last_action
-                    import random
-                    candidates = [a for a in valid_actions if str(a) != str(self.last_action)]
-                    if not candidates:
-                        candidates = valid_actions
-                    selected_internal_action = random.choice(candidates)
+                    # Force deterministic least-tried action in this state
+                    if not hasattr(self, 'state_action_counts'):
+                        self.state_action_counts = {}
+                    candidates = valid_actions
+                    
+                    # Log state action counts for debugging
+                    counts_debug = {a: self.state_action_counts.get(f"{current_hash}_{a}", 0) for a in candidates}
+                    print(f"Stalled at hash {hash(current_hash)}. Action counts: {counts_debug}")
+                    
+                    selected_internal_action = min(candidates, key=lambda a: self.state_action_counts.get(f"{current_hash}_{a}", 0))
+                    print(f"Selected least-tried action: {selected_internal_action}")
                 else:
                     selected_internal_action = self.explorer.choose_action(current_scene, valid_actions, self.last_action)
                 
-                import logging
-                logging.info(f"Selected experiment:\n{selected_internal_action}")
+                print(f"Selected experiment: {selected_internal_action}")
             else:
                 selected_internal_action = "ACTION1"
 
@@ -287,6 +318,11 @@ class CognitiveAgent(BaseAgent):
 
         self.last_scene_graph = current_scene
         self.last_action = selected_internal_action
+        
+        if not hasattr(self, 'state_action_counts'):
+            self.state_action_counts = {}
+        state_action = f"{current_hash}_{selected_internal_action}"
+        self.state_action_counts[state_action] = self.state_action_counts.get(state_action, 0) + 1
 
         # 6. Adapt internal action to official GameAction
         return ActionAdapter.to_game_action(selected_internal_action)

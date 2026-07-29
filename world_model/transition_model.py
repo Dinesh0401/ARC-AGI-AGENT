@@ -2,23 +2,34 @@ from dataclasses import dataclass, field
 from typing import Dict, Any, List, Optional
 from perception.scene_graph import SceneGraph
 
+def get_size_bucket(area: int) -> str:
+    if area < 5: return "tiny"
+    if area < 20: return "small"
+    if area < 50: return "medium"
+    return "large"
+
 @dataclass
 class TransitionRule:
     effects: Dict[str, Any]
     target_color: Optional[int] = None
     target_shape: Optional[str] = None
     target_area: Optional[int] = None
+    target_size_bucket: Optional[str] = None
     target_id: Optional[str] = None
     target_relations: List[tuple] = field(default_factory=list)
+    required_adjacent_colors: Optional[set] = None
     
     successful_matches: int = 0
     total_matches: int = 0
+    cumulative_error: float = 0.0
     
     @property
     def confidence(self) -> float:
         if self.total_matches == 0:
             return 0.5
-        return self.successful_matches / self.total_matches
+        success_ratio = self.successful_matches / self.total_matches
+        # Heavy penalty for large coordinate errors (0.1 per pixel error)
+        return max(0.0, success_ratio - (self.cumulative_error * 0.1))
         
     @property
     def specificity(self) -> int:
@@ -33,15 +44,32 @@ class TransitionRule:
     def matches(self, obj, state: SceneGraph) -> bool:
         if self.target_id is not None and self.target_id != obj.id: return False
         if self.target_color is not None and self.target_color != obj.color: return False
-        if self.target_shape is not None and self.target_shape != obj.shape: return False
-        if self.target_area is not None and self.target_area != obj.area: return False
-        
-        if self.target_relations:
-            current_rels = state.get_relations(obj.id)
-            for rel in self.target_relations:
-                if rel not in current_rels:
-                    return False
+        if self.required_adjacent_colors:
+            current_adj_colors = set()
+            for source_id, rel_type, target in state.relations:
+                if rel_type == "adjacent":
+                    if source_id == obj.id:
+                        current_adj_colors.add(state.objects[target].color)
+                    elif target == obj.id:
+                        current_adj_colors.add(state.objects[source_id].color)
+            if not self.required_adjacent_colors.issubset(current_adj_colors):
+                return False
+                
         return True
+
+    def match_score(self, obj) -> int:
+        """Returns a score indicating how well the soft constraints match."""
+        score = 0
+        if self.target_shape is not None:
+            if self.target_shape == obj.shape: score += 1
+            else: score -= 1
+        if self.target_area is not None:
+            if self.target_area == obj.area: score += 1
+            else: score -= 1
+        if self.target_size_bucket is not None:
+            if self.target_size_bucket == get_size_bucket(obj.area): score += 1
+            else: score -= 1
+        return score
 
 
 class TransitionModel:
@@ -50,6 +78,15 @@ class TransitionModel:
     def __init__(self):
         # Mapping from action -> list of TransitionRule
         self.rules: Dict[str, List[TransitionRule]] = {}
+        # Statistics for each color: {'blocked': int, 'passed': int}
+        self.collision_stats: Dict[int, Dict[str, int]] = {}
+        
+    def is_solid(self, color: int) -> bool:
+        stats = self.collision_stats.get(color)
+        if not stats: return False
+        total = stats['blocked'] + stats['passed']
+        if total < 2: return False
+        return (stats['blocked'] / total) > 0.8
         
     def update_from_error(self, action: str, prediction_error: float, actual_state: SceneGraph, pre_state: SceneGraph):
         """Learn from prediction error by comparing pre_state and actual_state."""
@@ -72,10 +109,55 @@ class TransitionModel:
                             if isinstance(mv, tuple) and len(mv) == 2 and mv[0] != 'unknown':
                                 dx = current_obj.centroid[0] - old_obj.centroid[0]
                                 dy = current_obj.centroid[1] - old_obj.centroid[1]
-                                if abs(dx - mv[0]) > 1e-4 or abs(dy - mv[1]) > 1e-4:
-                                    succeeded = False
+                                
+                                # Penalize rule heavily if the predicted movement doesn't match reality
+                                coord_error = abs(dx - mv[0]) + abs(dy - mv[1])
+                                rule.cumulative_error += coord_error
+                                
+                                if abs(dx - mv[0]) > 0.8 or abs(dy - mv[1]) > 0.8:
+                                    if abs(dx) <= 0.8 and abs(dy) <= 0.8:
+                                        # It didn't move. Was it blocked?
+                                        blocked = False
+                                        shifted_pixels = {(r + mv[0], c + mv[1]) for r, c in old_obj.pixels}
+                                        for other_id, other_obj in pre_state.objects.items():
+                                            if other_id != obj_id:
+                                                other_pixels = set(other_obj.pixels)
+                                                if shifted_pixels & other_pixels:
+                                                    blocked = True
+                                                    if other_obj.color not in self.collision_stats:
+                                                        self.collision_stats[other_obj.color] = {'blocked': 0, 'passed': 0}
+                                                    self.collision_stats[other_obj.color]['blocked'] += 1
+                                                    break
+                                        if blocked:
+                                            # It was blocked, so the physical intent was correct. Don't penalize.
+                                            succeeded = True
+                                        else:
+                                            succeeded = False
+                                    else:
+                                        succeeded = False
+                        
+                        # Record 'passed' stats for movement that succeeded
+                        if "movement" in rule.effects and succeeded and (abs(dx) > 0.8 or abs(dy) > 0.8):
+                            actual_pixels = {(r + dx, c + dy) for r, c in old_obj.pixels}
+                            for other_id, other_obj in pre_state.objects.items():
+                                if other_id != obj_id:
+                                    if actual_pixels & set(other_obj.pixels):
+                                        if other_obj.color not in self.collision_stats:
+                                            self.collision_stats[other_obj.color] = {'blocked': 0, 'passed': 0}
+                                        self.collision_stats[other_obj.color]['passed'] += 1
+                                        
                         if succeeded:
                             rule.successful_matches += 1
+                            if rule.required_adjacent_colors is not None:
+                                current_adj_colors = set()
+                                for source_id, rel_type, target in pre_state.relations:
+                                    if rel_type == "adjacent":
+                                        if source_id == obj_id:
+                                            current_adj_colors.add(pre_state.objects[target].color)
+                                        elif target == obj_id:
+                                            current_adj_colors.add(pre_state.objects[source_id].color)
+                                rule.required_adjacent_colors &= current_adj_colors
+                            
                             
         # Prune rules with very poor confidence after enough observations
         self.rules[action] = [r for r in self.rules[action] if r.total_matches < 3 or r.confidence > 0.2]
@@ -90,42 +172,57 @@ class TransitionModel:
                     if old_obj.color != current_obj.color:
                         obj_effects["changes_color"] = True
                     
-                    # Flexible movement verification
-                    if old_obj.centroid != current_obj.centroid:
-                        dx = current_obj.centroid[0] - old_obj.centroid[0]
-                        dy = current_obj.centroid[1] - old_obj.centroid[1]
+                    # Strict movement quantization to prevent tracker noise explosion
+                    dx_float = current_obj.centroid[0] - old_obj.centroid[0]
+                    dy_float = current_obj.centroid[1] - old_obj.centroid[1]
+                    if abs(dx_float) > 0.8 or abs(dy_float) > 0.8:
+                        dx = int(round(dx_float))
+                        dy = int(round(dy_float))
                         
-                        if abs(dx - round(dx)) < 1e-4 and abs(dy - round(dy)) < 1e-4:
-                            obj_effects["movement"] = (int(round(dx)), int(round(dy)))
-                        else:
-                            obj_effects["movement"] = (round(dx, 2), round(dy, 2))
+                        if dx != 0 or dy != 0:
+                            obj_effects["movement"] = (dx, dy)
                             
                         # Detect shape change (often causes non-integer centroid shifts)
                         if len(old_obj.pixels) != len(current_obj.pixels) or old_obj.shape != current_obj.shape:
                             obj_effects["changes_shape"] = True
                     
                     if obj_effects:
+                        if list(obj_effects.keys()) == ["changes_shape"]:
+                            continue # Ignore rules that only change shape since apply_rules doesn't implement shape changing
+                            
                         # Do NOT extract relations for preconditions. 
                         # Overfitting to spatial relations causes rules to break as soon as objects move.
                         safe_rels = []
+                        
+                        adj_colors = set()
+                        for source_id, rel_type, target in pre_state.relations:
+                            if rel_type == "adjacent":
+                                if source_id == obj_id:
+                                    adj_colors.add(pre_state.objects[target].color)
+                                elif target == obj_id:
+                                    adj_colors.add(pre_state.objects[source_id].color)
                                 
                         new_rule = TransitionRule(
                             effects=obj_effects,
                             target_color=old_obj.color,
                             target_shape=old_obj.shape,
                             target_area=old_obj.area,
+                            target_size_bucket=get_size_bucket(old_obj.area),
                             target_relations=safe_rels,
+                            required_adjacent_colors=adj_colors,
                             successful_matches=1,
                             total_matches=1
                         )
                         
-                        # Check if similar rule exists
+                        # Check if similar rule exists and merge if so
                         exists = False
                         for r in self.rules[action]:
                             if (r.target_color == new_rule.target_color and 
-                                r.target_shape == new_rule.target_shape and 
-                                r.target_area == new_rule.target_area and
+                                r.target_size_bucket == new_rule.target_size_bucket and 
                                 r.effects == new_rule.effects):
+                                # Merge evidence!
+                                r.total_matches += 1
+                                r.successful_matches += 1
                                 exists = True
                                 break
                         if not exists:
@@ -163,15 +260,15 @@ class TransitionModel:
         new_objects = []
         
         for obj in state.objects.values():
-            # Find all matching rules for this object
-            matching_rules = [r for r in rules if r.matches(obj, state) and r.confidence >= 0.5]
+            # Find all matching rules for this object. Soft constraints must not be strongly negative.
+            matching_rules = [r for r in rules if r.matches(obj, state) and r.confidence >= 0.5 and r.match_score(obj) >= 0]
             
             if not matching_rules:
                 new_objects.append(obj)
                 continue
                 
-            # Conflict resolution: sort by specificity (desc), then confidence (desc)
-            matching_rules.sort(key=lambda r: (r.specificity, r.confidence), reverse=True)
+            # Conflict resolution: sort by specificity (desc), then match_score (desc), then confidence (desc)
+            matching_rules.sort(key=lambda r: (r.specificity, r.match_score(obj), r.confidence), reverse=True)
             best_rule = matching_rules[0]
             obj_effects = best_rule.effects
             
@@ -196,11 +293,23 @@ class TransitionModel:
                     dx, dy = 0, 0
                     
                 if dx != 'unknown' and dy != 'unknown':
-                    new_centroid = (obj.centroid[0] + dx, obj.centroid[1] + dy)
-                    min_r, min_c, max_r, max_c = obj.bbox
-                    new_bbox = (min_r + dx, min_c + dy, max_r + dx, max_c + dy)
-                    new_pixels = [(r + dx, c + dy) for r, c in obj.pixels]
-                    mutated = True
+                    shifted_pixels = {(r + dx, c + dy) for r, c in obj.pixels}
+                    blocked = False
+                    for other_obj in state.objects.values():
+                        if other_obj.id != obj.id and self.is_solid(other_obj.color):
+                            if shifted_pixels & set(other_obj.pixels):
+                                blocked = True
+                                break
+                    
+                    if blocked:
+                        # Collision prevented movement
+                        pass
+                    else:
+                        new_centroid = (obj.centroid[0] + dx, obj.centroid[1] + dy)
+                        min_r, min_c, max_r, max_c = obj.bbox
+                        new_bbox = (min_r + dx, min_c + dy, max_r + dx, max_c + dy)
+                        new_pixels = list(shifted_pixels)
+                        mutated = True
                 
             if new_color != obj.color or new_centroid != obj.centroid:
                 new_objects.append(Object(

@@ -9,18 +9,27 @@ class EpisodicMemory:
         self.episodes: List[Tuple[SceneGraph, Any, float, SceneGraph]] = []
         # Track visit frequencies of state hashes
         self.visit_counts: Dict[int, int] = {}
+        # Track physically visited grid coordinates (tiles)
+        self.visited_tiles: set[Tuple[int, int]] = set()
+        
+    def _hash_state(self, state: SceneGraph) -> str:
+        """Robust state hashing using exact object pixels to guarantee lossless representation."""
+        pixel_tuples = []
+        for obj in state.objects.values():
+            pixel_tuples.append(f"{obj.color}:{tuple(sorted(obj.pixels))}")
+        return str(hash(tuple(sorted(pixel_tuples))))
         
     def add_experience(self, state: SceneGraph, action: Any, reward: float, next_state: SceneGraph):
         """Record a single frame transition."""
         self.episodes.append((state, action, reward, next_state))
         
         # Track visit counts
-        state_hash = hash(state)
+        state_hash = self._hash_state(state)
         self.visit_counts[state_hash] = self.visit_counts.get(state_hash, 0) + 1
         
     def get_visit_count(self, state: SceneGraph) -> int:
         """Get how many times a state has been visited."""
-        return self.visit_counts.get(hash(state), 0)
+        return self.visit_counts.get(self._hash_state(state), 0)
         
     def get_recent(self, n: int = 5) -> List[Tuple[SceneGraph, Any, float, SceneGraph]]:
         """Retrieve the n most recent experiences."""
@@ -30,11 +39,10 @@ class EpisodicMemory:
         """Get hashes of recently visited states to prevent deep loops."""
         hashes = []
         for exp in self.episodes[-limit:]:
-            state = exp[3] # next_state
-            state_hash = "|".join(sorted(f"{oid}:{obj.color}:{obj.centroid}" for oid, obj in state.objects.items()))
-            hashes.append(state_hash)
+            hashes.append(self._hash_state(exp[3])) # next_state
         return hashes
         
     def clear(self):
         self.episodes.clear()
         self.visit_counts.clear()
+        self.visited_tiles.clear()

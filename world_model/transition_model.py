@@ -190,17 +190,10 @@ class TransitionModel:
                         if list(obj_effects.keys()) == ["changes_shape"]:
                             continue # Ignore rules that only change shape since apply_rules doesn't implement shape changing
                             
-                        # Do NOT extract relations for preconditions. 
+                        # Do NOT extract relations or adjacent colors for preconditions. 
                         # Overfitting to spatial relations causes rules to break as soon as objects move.
                         safe_rels = []
-                        
-                        adj_colors = set()
-                        for source_id, rel_type, target in pre_state.relations:
-                            if rel_type == "adjacent":
-                                if source_id == obj_id:
-                                    adj_colors.add(pre_state.objects[target].color)
-                                elif target == obj_id:
-                                    adj_colors.add(pre_state.objects[source_id].color)
+                        adj_colors = None
                                 
                         new_rule = TransitionRule(
                             effects=obj_effects,

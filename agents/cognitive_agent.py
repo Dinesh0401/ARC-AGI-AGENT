@@ -270,7 +270,10 @@ class CognitiveAgent(BaseAgent):
                 a for a in available_actions if isinstance(a, str) and a != "RESET" and a not in banned_actions
             ]
             if not valid_actions:
-                valid_actions = ["ACTION1", "ACTION2", "ACTION3", "ACTION4"]
+                # If all available actions are banned, fallback to default directional actions that aren't banned
+                valid_actions = [a for a in ["ACTION1", "ACTION2", "ACTION3", "ACTION4"] if a not in banned_actions]
+                if not valid_actions: # Absolute last resort
+                    valid_actions = ["ACTION1", "ACTION2", "ACTION3", "ACTION4"]
                 
             if valid_actions:
                 if is_stalled:

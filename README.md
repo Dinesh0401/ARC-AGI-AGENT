@@ -1,7 +1,7 @@
 # ARC-AGI-3 Multi Cognitive Research Agent
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-37%2F37%20passed-brightgreen.svg)](#-testing)
+[![Tests](https://img.shields.io/badge/tests-37%2F37%20passed-brightgreen.svg)](#-testing) 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A modular cognitive AI framework for solving interactive, unseen reasoning tasks in the **ARC-AGI-3** benchmark. Implements object-centric perception, multi-store memory, hypothesis-driven reasoning, search-based planning (BFS, A*, MCTS), predictive world modeling, and closed-loop adaptive learning.

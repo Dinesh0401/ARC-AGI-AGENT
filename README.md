@@ -161,7 +161,6 @@ ARC-AGI-AGENT/
 - Matplotlib / Pillow (visualization)
 - Pydantic (data validation)
 - Pytest (testing)
-
 ---
 
 ## License

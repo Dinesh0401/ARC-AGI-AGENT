@@ -7,7 +7,6 @@
 A modular cognitive AI framework for solving interactive, unseen reasoning tasks in the **ARC-AGI-3** benchmark. Implements object-centric perception, multi-store memory, hypothesis-driven reasoning, search-based planning (BFS, A*, MCTS), predictive world modeling, and closed-loop adaptive learning.
 
 ---
-
 ## Architecture
 
 ```text

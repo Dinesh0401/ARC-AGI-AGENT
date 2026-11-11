@@ -50,6 +50,7 @@ class ObjectParser:
             color = int(grid[comp_pixels[0][0], comp_pixels[0][1]])
             bbox = calculate_bbox(comp_pixels)
             centroid = calculate_centroid(comp_pixels)
+            centroid = (round(centroid[0], 4), round(centroid[1], 4))
             area = len(comp_pixels)
             perimeter = calculate_perimeter(comp_pixels)
             shape = determine_shape(comp_pixels, bbox)

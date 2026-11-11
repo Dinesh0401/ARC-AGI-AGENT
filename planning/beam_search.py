@@ -18,7 +18,7 @@ class BeamSearchPlanner(Planner):
         if not available_actions:
             return None
             
-        initial_score = self.value_function.evaluate_state(initial_state, [], initial_state)
+        initial_score = self.value_function.evaluate_state(initial_state, [], initial_state, goal)
         # Beam contains tuples of (score, state, path)
         beam = [(initial_score, initial_state, [])]
         best_path = []
@@ -41,7 +41,7 @@ class BeamSearchPlanner(Planner):
                     depth_expanded += 1
                     
                     # Evaluate rollout
-                    new_score = self.value_function.evaluate_state(next_state, new_path, initial_state)
+                    new_score = self.value_function.evaluate_state(next_state, new_path, initial_state, goal)
                     
                     pred_hash = "|".join(sorted(f"{oid}:{obj.color}:{obj.centroid}" for oid, obj in next_state.objects.items()))
                     unique_hashes.add(pred_hash)
@@ -55,6 +55,13 @@ class BeamSearchPlanner(Planner):
             unique_count = len(unique_hashes)
             unique_states_by_depth[depth + 1] = unique_count
             duplicate_states_by_depth[depth + 1] = depth_expanded - unique_count
+            
+            if depth == 0:
+                candidates.sort(key=lambda x: x[0], reverse=True)
+                print("\n=== Beam Search Depth 1 Rankings ===")
+                for c_score, c_state, c_path in candidates:
+                    print(f"Path: {c_path} | Score: {c_score:.2f}")
+                print("====================================\n")
             
             logging.info(f"Depth {depth + 1} | Expanded Nodes: {depth_expanded} | Unique States: {unique_count} | Duplicate States: {depth_expanded - unique_count}")
                     

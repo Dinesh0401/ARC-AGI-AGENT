@@ -28,8 +28,8 @@ class GoalGenerator:
         # 1. Generate new hypotheses based on object tracker state
         if current_scene and object_tracker:
             for obj_id, tracked_obj in object_tracker.tracked_objects.items():
-                if tracked_obj.state_changes == 0 and len(tracked_obj.interaction_history) == 0:
-                    # Untested object
+                if len(tracked_obj.interaction_history) == 0:
+                    # Untested object - aggressively seed hypotheses to ensure exploration
                     for action in ["ACTION1", "ACTION2", "ACTION3", "ACTION4"]:
                         desc = f"IF {action} THEN {obj_id} moves"
                         self.hypothesis_engine.add_hypothesis(
@@ -40,7 +40,7 @@ class GoalGenerator:
                             initial_confidence=0.5
                         )
                 
-                if tracked_obj.is_movable:
+                elif tracked_obj.is_movable:
                     for action in ["ACTION1", "ACTION2", "ACTION3", "ACTION4"]:
                         desc = f"IF {action} THEN {obj_id} moves"
                         self.hypothesis_engine.add_hypothesis(
@@ -51,11 +51,45 @@ class GoalGenerator:
                             initial_confidence=0.7
                         )
 
-        # 2. Emit the primary environment-level goal
+        # 2. Goal Discovery Module
+        player_id = None
+        for obj_id, obj in object_tracker.tracked_objects.items():
+            if obj.is_movable:
+                player_id = obj_id
+                break
+                
+        if current_scene and object_tracker:
+            for obj_id, tracked_obj in object_tracker.tracked_objects.items():
+                if obj_id == player_id:
+                    continue
+                    
+                # Calculate object importance
+                importance = len(tracked_obj.interaction_history) + tracked_obj.state_changes * 2
+                
+                # Bonus importance for unique colored objects (e.g. key, door, target)
+                color_counts = {}
+                for other_obj in current_scene.objects.values():
+                    color_counts[other_obj.color] = color_counts.get(other_obj.color, 0) + 1
+                    
+                if obj_id in current_scene.objects:
+                    obj_color = current_scene.objects[obj_id].color
+                    if color_counts.get(obj_color, 0) == 1:
+                        importance += 10  # Unique objects are highly important
+                        
+                if importance > 0 or len(tracked_obj.interaction_history) == 0:
+                    goals.append(Goal(
+                        description=f"Interact with {obj_id}",
+                        target_conditions={"type": "Reach", "target_id": obj_id},
+                        priority=int(importance * 10),
+                        confidence=1.0,
+                        source="GoalGenerator"
+                    ))
+                    
+        # Emit a fallback explore goal
         goals.append(Goal(
-            description="Complete the level by matching the implicit ARC rules.",
-            target_conditions={"type": "Solve"},
-            priority=100,
+            description="Explore unseen tiles",
+            target_conditions={"type": "Explore"},
+            priority=5,
             confidence=1.0,
             source="GoalGenerator"
         ))

@@ -10,6 +10,7 @@ class LearningLoop:
     """Orchestrates the entire learning cycle from Experience to Memory updates."""
     
     def __init__(self, memory: CognitiveMemory, prediction_engine: PredictionEngine):
+        self.prediction_engine = prediction_engine
         self.experience_buffer = ExperienceBuffer(capacity=100)
         self.error_calculator = PredictionErrorCalculator()
         self.belief_updater = BeliefUpdater(memory.belief_memory)
@@ -43,19 +44,24 @@ class LearningLoop:
                 pred_color = pred_obj.color
                 act_color = act_obj.color
                 
-                if pred_dx != 0 or pred_dy != 0 or act_dx != 0 or act_dy != 0 or pred_color != pre_obj.color or act_color != pre_obj.color:
+                if abs(pred_dx) > 0.8 or abs(pred_dy) > 0.8 or abs(act_dx) > 0.8 or abs(act_dy) > 0.8 or pred_color != pre_obj.color or act_color != pre_obj.color:
                     print(f"Object {obj_id}:")
                     print(f"  Predicted: dx={pred_dx}, dy={pred_dy}, color={pred_color}")
                     print(f"  Actual   : dx={act_dx}, dy={act_dy}, color={act_color}")
                     print(f"  Error    : dx={pred_dx - act_dx}, dy={pred_dy - act_dy}")
                     
-        rules = self.rule_learner.transition_model.rules.get(experience.action)
-        if rules:
-            print(f"Rules for {experience.action}:")
-            for i, r in enumerate(rules):
-                print(f"  Rule {i+1} | Confidence={r.confidence:.2f} | Effects={r.effects}")
-        else:
-            print(f"Rule Used: None")
+                    print(f"  Rule Diagnostic:")
+                    rules = self.rule_learner.transition_model.rules.get(experience.action, [])
+                    evaluated_any = False
+                    for i, r in enumerate(rules):
+                        if r.target_color == pre_obj.color:
+                            evaluated_any = True
+                            if r.matches(pre_obj, pre_state):
+                                print(f"    - Matched Rule {i+1}: Effects={r.effects} | Confidence={r.confidence:.2f} | Score={r.match_score(pre_obj)}")
+                            else:
+                                print(f"    - Rejected Rule {i+1}: Effects={r.effects} | Confidence={r.confidence:.2f} (Hard constraints failed)")
+                    if not evaluated_any:
+                        print(f"    - No rules found targeting color {pre_obj.color}")
         print(f"-----------------------------\n")
         
         # 2. Extract Belief IDs from the Plan's source if available
@@ -67,6 +73,9 @@ class LearningLoop:
         
         # 4. Learn Rules and Update Prediction Accuracy Metrics
         self.rule_learner.learn_from_transition(experience.pre_state, experience.action, experience.actual_state, error)
+        
+        # Flush the stale prediction cache so the planner uses the newly learned/pruned rules
+        self.prediction_engine.cache.clear()
         
         if hasattr(self.rule_learner.transition_model, 'rules'):
             # The transition model belongs to PredictionEngine. Update prediction metrics if PredictionEngine is available.

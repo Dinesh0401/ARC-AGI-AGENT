@@ -38,8 +38,10 @@ class TrackedObject:
         self.current_state = new_obj
         
         if action_applied:
-            self.interaction_history.append(action_applied)
             self.last_action_applied = action_applied
+            # Only count it as an interaction if the object actually changed in some way!
+            if new_obj.centroid != self.position_history[-2] or new_obj.color != self.color_history[-2] or new_obj.shape != self.current_state.shape:
+                self.interaction_history.append(action_applied)
 
 
 class ObjectTracker:
@@ -48,6 +50,7 @@ class ObjectTracker:
     def __init__(self, causal_graph: Optional['CausalGraph'] = None):
         self.tracked_objects: Dict[str, TrackedObject] = {}
         self.causal_graph = causal_graph
+        self._next_id = 1
         
     def _distance(self, c1: tuple, c2: tuple) -> float:
         return math.sqrt((c1[0]-c2[0])**2 + (c1[1]-c2[1])**2)
@@ -92,7 +95,10 @@ class ObjectTracker:
                 
         # 3. New Objects
         for new_obj in unmatched_new:
-            # Create new identity
+            # Create globally unique identity
+            new_id = f"Tracked_{self._next_id:04d}"
+            self._next_id += 1
+            new_obj.id = new_id
             tracked = TrackedObject(new_obj)
             self.tracked_objects[tracked.identity_id] = tracked
             

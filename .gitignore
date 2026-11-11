@@ -27,3 +27,9 @@ replays/
 eval_results/
 *.png
 *.gif
+
+# Frontend dependencies and builds
+node_modules/
+dist/
+.vite/
+

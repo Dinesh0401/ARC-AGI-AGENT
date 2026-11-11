@@ -1,0 +1,23 @@
+# Node / React
+node_modules/
+frontend/dist/
+frontend/build/
+.npm
+*.log
+
+# Python / FastAPI
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+.env
+
+# IDE / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Local data cache
+*.tmp

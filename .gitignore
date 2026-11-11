@@ -33,3 +33,10 @@ node_modules/
 dist/
 .vite/
 
+# Runtime traces
+trace.json
+
+# Local uncommitted projects
+mf-portfolio-dashboard/
+
+
